@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>天氣大作戰：神奇衣櫥與氣溫冒險</title>
+<style>
+  * {
+    box-sizing: border-box;
+    font-family: "Microsoft JhengHei", "PingFang TC", "Heiti TC", sans-serif;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(180deg, #4fc3f7 0%, #b3e5fc 50%, #fff9c4 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  /* 頂部遊戲狀態列 HUD */
+  .hud {
+    width: 100%;
+    max-width: 960px;
+    background: rgba(255, 255, 255, 0.92);
+    border-bottom: 4px solid #0288d1;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 0 0 24px 24px;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.12);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .hud-title {
+    font-size: 22px;
+    font-weight: 900;
+    color: #01579b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .hud-stats {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+  }
+  .stat-pill {
+    background: #fff3e0;
+    border: 2px solid #ff9800;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 18px;
+    color: #e65100;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .sound-btn {
+    background: #e1f5fe;
+    border: 2px solid #0288d1;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* 主遊戲舞台 */
+  .game-wrapper {
+    width: 94%;
+    max-width: 920px;
+    margin: 20px auto;
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: 28px;
+    border: 5px solid #ffffff;
+    box-shadow: 0 12px 30px rgba(0, 77, 128, 0.18);
+    padding: 24px;
+    position: relative;
+    min-height: 520px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .screen {
+    display: none;
+    animation: fadeIn 0.4s ease;
+  }
+  .screen.active {
+    display: block;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* 開始畫面 */
+  .start-screen {
+    text-align: center;
+    padding: 20px 10px;
+  }
+  .hero-banner {
+    font-size: 72px;
+    margin: 10px 0;
+    animation: float 2.5s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  .start-title {
+    font-size: 36px;
+    font-weight: 900;
+    color: #0277bd;
+    margin: 10px 0;
+    text-shadow: 2px 2px 0 #b3e5fc;
+  }
+  .start-desc {
+    font-size: 20px;
+    color: #455a64;
+    margin-bottom: 25px;
+    line-height: 1.6;
+  }
+  .level-cards {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 30px;
+  }
+  .lvl-preview {
+    background: #f1f8e9;
+    border: 3px solid #8bc34a;
+    border-radius: 18px;
+    padding: 15px;
+    width: 240px;
+    text-align: center;
+  }
+  .lvl-preview h3 {
+    margin: 8px 0 4px;
+    color: #33691e;
+    font-size: 19px;
+  }
+  .lvl-preview p {
+    margin: 0;
+    font-size: 15px;
+    color: #558b2f;
+  }
+
+  .big-play-btn {
+    background: linear-gradient(180deg, #ffca28 0%, #ff8f00 100%);
+    color: #fff;
+    border: 4px solid #fff;
+    padding: 16px 48px;
+    font-size: 26px;
+    font-weight: 900;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 8px 0 #e65100, 0 12px 20px rgba(0,0,0,0.2);
+    transition: transform 0.1s;
+    text-shadow: 1px 2px 2px rgba(0,0,0,0.25);
+  }
+  .big-play-btn:active {
+    transform: translateY(6px);
+    box-shadow: 0 2px 0 #e65100;
+  }
+
+  /* 關卡標題橫幅 */
+  .stage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #e1f5fe;
+    padding: 12px 20px;
+    border-radius: 18px;
+    margin-bottom: 18px;
+    border: 2px solid #81d4fa;
+  }
+  .stage-badge {
+    background: #0288d1;
+    color: white;
+    padding: 5px 14px;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 16px;
+  }
+  .stage-goal {
+    font-size: 20px;
+    font-weight: bold;
+    color: #01579b;
+  }
+
+  /* 第一關：神奇衣櫥換裝大挑戰 */
+  .wardrobe-arena {
+    display: flex;
+    gap: 20px;
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+  .weather-window {
+    flex: 1;
+    min-width: 270px;
+    border-radius: 22px;
+    padding: 20px;
+    text-align: center;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.15);
+    transition: background 0.5s;
+    position: relative;
+  }
+  .weather-sky {
+    font-size: 64px;
+    margin-bottom: 5px;
+    animation: float 2s infinite ease-in-out;
+  }
+  .temp-tag {
+    font-size: 28px;
+    font-weight: 900;
+    background: rgba(0,0,0,0.25);
+    padding: 6px 20px;
+    border-radius: 20px;
+    margin: 6px 0;
+  }
+  .kid-avatar-box {
+    background: rgba(255,255,255,0.9);
+    border-radius: 50%;
+    width: 130px;
+    height: 130px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 12px 0;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+    color: #333;
+  }
+  .kid-face {
+    font-size: 56px;
+    line-height: 1;
+  }
+  .kid-outfit-display {
+    font-size: 26px;
+    margin-top: 2px;
+  }
+  .kid-speech {
+    background: white;
+    color: #333;
+    padding: 10px 16px;
+    border-radius: 16px;
+    font-size: 17px;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    position: relative;
+  }
+
+  .closet-panel {
+    flex: 1.2;
+    min-width: 290px;
+    background: #fff8e1;
+    border: 4px solid #ffe082;
+    border-radius: 22px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .closet-title {
+    text-align: center;
+    font-size: 20px;
+    font-weight: 900;
+    color: #f57c00;
+    margin-bottom: 14px;
+  }
+  .outfit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .outfit-btn {
+    background: white;
+    border: 3px solid #ffcc80;
+    border-radius: 18px;
+    padding: 14px 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    box-shadow: 0 5px 0 #ffe0b2;
+  }
+  .outfit-btn:hover {
+    transform: translateY(-3px);
+    border-color: #ff9800;
+  }
+  .outfit-btn:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #ffe0b2;
+  }
+  .outfit-btn .emoji {
+    font-size: 44px;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .outfit-btn .name {
+    font-size: 18px;
+    font-weight: bold;
+    color: #4e342e;
+  }
+  .outfit-btn.shake {
+    animation: shake 0.4s;
+    border-color: #e53935;
+    background: #ffebee;
+  }
+  .outfit-btn.pop {
+    border-color: #43a047;
+    background: #e8f5e9;
+    transform: scale(1.05);
+  }
+
+  /* 第二關：氣溫能量棒衝刺 */
+  .thermo-game-area {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 10px 0;
+  }
+  .mission-card {
+    flex: 1;
+    min-width: 280px;
+    background: #f3e5f5;
+    border: 3px solid #ce93d8;
+    border-radius: 22px;
+    padding: 20px;
+    text-align: center;
+  }
+  .mission-icon {
+    font-size: 72px;
+    margin: 8px 0;
+  }
+  .mission-text {
+    font-size: 21px;
+    font-weight: bold;
+    color: #4a148c;
+    line-height: 1.5;
+  }
+  .thermo-controller {
+    flex: 1;
+    min-width: 280px;
+    background: #e8f5e9;
+    border: 3px solid #a5d6a7;
+    border-radius: 22px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .tube-wrap {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin: 10px 0;
+  }
+  .big-tube {
+    width: 54px;
+    height: 230px;
+    background: #eceff1;
+    border: 4px solid #78909c;
+    border-radius: 27px;
+    padding: 5px;
+    display: flex;
+    align-items: flex-end;
+    position: relative;
+  }
+  .mercury {
+    width: 100%;
+    height: 50%;
+    border-radius: 20px;
+    transition: height 0.2s, background 0.2s;
+  }
+  .zone-labels {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 220px;
+    font-weight: bold;
+    font-size: 17px;
+  }
+  .slider-big {
+    width: 100%;
+    height: 16px;
+    margin: 14px 0;
+    cursor: pointer;
+    accent-color: #ff5722;
+  }
+  .lock-btn {
+    background: #00897b;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    font-size: 20px;
+    font-weight: bold;
+    border-radius: 25px;
+    cursor: pointer;
+    box-shadow: 0 5px 0 #004d40;
+  }
+  .lock-btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 1px 0 #004d40;
+  }
+
+  /* 第三關：快問快答大魔王（科學結論泡泡） */
+  .boss-box {
+    background: #fffde7;
+    border: 4px solid #fbc02d;
+    border-radius: 22px;
+    padding: 22px;
+    text-align: center;
+  }
+  .boss-avatar {
+    font-size: 64px;
+    margin-bottom: 6px;
+  }
+  .sentence-display {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    background: white;
+    padding: 18px;
+    border-radius: 16px;
+    border: 2px dashed #ffb300;
+    margin: 14px 0 22px;
+    line-height: 1.6;
+  }
+  .highlight-blank {
+    display: inline-block;
+    min-width: 100px;
+    padding: 2px 14px;
+    background: #fff3e0;
+    border-bottom: 4px solid #ff6f00;
+    color: #e65100;
+    border-radius: 8px;
+  }
+  .bubble-options {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .bubble-btn {
+    background: linear-gradient(180deg, #4dd0e1 0%, #0097a7 100%);
+    color: white;
+    border: 3px solid #fff;
+    padding: 14px 28px;
+    font-size: 22px;
+    font-weight: bold;
+    border-radius: 30px;
+    cursor: pointer;
+    box-shadow: 0 6px 0 #006064;
+    transition: transform 0.1s;
+  }
+  .bubble-btn:hover {
+    transform: scale(1.06);
+  }
+  .bubble-btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 #006064;
+  }
+
+  /* 過關勝利畫面 */
+  .victory-screen {
+    text-align: center;
+    padding: 20px;
+  }
+  .trophy {
+    font-size: 96px;
+    animation: bounce 1s infinite alternate;
+  }
+  @keyframes bounce {
+    from { transform: translateY(0) scale(1); }
+    to { transform: translateY(-15px) scale(1.08); }
+  }
+  .stars-earned {
+    font-size: 48px;
+    margin: 10px 0;
+  }
+  .summary-board {
+    background: #e8f5e9;
+    border: 3px solid #66bb6a;
+    border-radius: 18px;
+    padding: 16px;
+    max-width: 560px;
+    margin: 16px auto 24px;
+    text-align: left;
+    font-size: 18px;
+    line-height: 1.7;
+    color: #1b5e20;
+  }
+
+  /* 彈出提示與特效 */
+  .toast-banner {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #323232;
+    color: white;
+    padding: 12px 28px;
+    border-radius: 30px;
+    font-size: 20px;
+    font-weight: bold;
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+  }
+  .toast-banner.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(8px);
+  }
+
+  .confetti {
+    position: fixed;
+    width: 12px;
+    height: 12px;
+    top: -20px;
+    z-index: 999;
+    pointer-events: none;
+    animation: fall 2.5s linear forwards;
+  }
+  @keyframes fall {
+    to {
+      transform: translateY(105vh) rotate(720deg);
+      opacity: 0;
+    }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+  }
+</style>
+</head>
+<body>
+
+  <!-- 頂部狀態列 -->
+  <div class="hud">
+    <div class="hud-title">🌤️ 天氣大作戰：氣溫小達人</div>
+    <div class="hud-stats">
+      <div class="stat-pill">⭐ 星星：<span id="score">0</span></div>
+      <div class="stat-pill">🔥 連勝：<span id="combo">0</span></div>
+      <button class="sound-btn" id="sound-toggle" onclick="toggleSound()" title="開關音效">🔊</button>
+    </div>
+  </div>
+
+  <!-- 浮動提示條 -->
+  <div class="toast-banner" id="toast">太棒了！答對了！</div>
+
+  <!-- 主舞台 -->
+  <div class="game-wrapper">
+
+    <!-- 0. 開始畫面 -->
+    <div id="screen-start" class="screen active start-screen">
+      <div class="hero-banner">☀️🧥❄️👕</div>
+      <div class="start-title">神奇衣櫥與氣溫大冒險</div>
+      <div class="start-desc">天氣每天都在變！快來幫小朋友挑選合適的衣服，<br>解鎖三大關卡，成為「氣溫科學小博士」！</div>
+      
+      <div class="level-cards">
+        <div class="lvl-preview">
+          <div style="font-size:36px;">👕</div>
+          <h3>第一關：神奇衣櫥</h3>
+          <p>看氣溫挑衣服，幫角色換裝！</p>
+        </div>
+        <div class="lvl-preview">
+          <div style="font-size:36px;">🌡️</div>
+          <h3>第二關：調溫實驗室</h3>
+          <p>控制溫度計升降，找出正確氣溫！</p>
+        </div>
+        <div class="lvl-preview">
+          <div style="font-size:36px;">🫧</div>
+          <h3>第三關：科學泡泡陣</h3>
+          <p>戳破正確詞語泡泡，完成結論！</p>
+        </div>
+      </div>
+
+      <button class="big-play-btn" onclick="startGame()">🚀 開始冒險！</button>
+    </div>
+
+    <!-- 1. 第一關：神奇衣櫥 -->
+    <div id="screen-stage1" class="screen">
+      <div class="stage-header">
+        <span class="stage-badge">第一關：神奇衣櫥 (<span id="s1-progress">1</span>/4)</span>
+        <span class="stage-goal">點擊右邊衣櫥，幫小朋友換上合適的衣服！</span>
+      </div>
+
+      <div class="wardrobe-arena">
+        <div class="weather-window" id="weather-window" style="background: linear-gradient(135deg, #ff7043, #ffa726);">
+          <div class="weather-sky" id="w-sky">☀️</div>
+          <div class="temp-tag" id="w-temp">A. 炎熱（高溫）</div>
+          <div class="kid-avatar-box">
+            <div class="kid-face" id="kid-face">🥵</div>
+            <div class="kid-outfit-display" id="kid-outfit">❓</div>
+          </div>
+          <div class="kid-speech" id="kid-speech">「好熱啊！太陽好猛烈，我該穿什麼呢？」</div>
+        </div>
+
+        <div class="closet-panel">
+          <div class="closet-title">🚪 魔法衣櫥（請點選一套衣服）</div>
+          <div class="outfit-grid">
+            <button class="outfit-btn" onclick="chooseOutfit('A', this)">
+              <span class="emoji">🎽🩳</span>
+              <span class="name">背心、短褲</span>
+            </button>
+            <button class="outfit-btn" onclick="chooseOutfit('B', this)">
+              <span class="emoji">👕👖</span>
+              <span class="name">短袖襯衫、長褲</span>
+            </button>
+            <button class="outfit-btn" onclick="chooseOutfit('C', this)">
+              <span class="emoji">🧥👖</span>
+              <span class="name">薄外套、長褲</span>
+            </button>
+            <button class="outfit-btn" onclick="chooseOutfit('D', this)">
+              <span class="emoji">🧣🧥</span>
+              <span class="name">冷帽、厚大衣</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 第二關：調溫實驗室 -->
+    <div id="screen-stage2" class="screen">
+      <div class="stage-header">
+        <span class="stage-badge">第二關：調溫實驗室 (<span id="s2-progress">1</span>/4)</span>
+        <span class="stage-goal">拖動滑桿調整溫度計，再按「確定氣溫」！</span>
+      </div>
+
+      <div class="thermo-game-area">
+        <div class="mission-card">
+          <div style="font-weight:bold; color:#7b1fa2; font-size:18px;">📢 觀察任務</div>
+          <div class="mission-icon" id="s2-icon">🧣🧤</div>
+          <div class="mission-text" id="s2-desc">小朋友戴著冷帽、穿著厚外套和圍巾，冷得發抖！<br>現在應該是哪一種氣溫？</div>
+        </div>
+
+        <div class="thermo-controller">
+          <div style="font-size:22px; font-weight:900; color:#2e7d32;">目前設定：<span id="s2-current-label" style="color:#fb8c00;">B. 溫暖</span></div>
+          
+          <div class="tube-wrap">
+            <div class="big-tube">
+              <div class="mercury" id="s2-mercury" style="height: 60%; background: #fb8c00;"></div>
+            </div>
+            <div class="zone-labels">
+              <span style="color:#e53935;">🔥 A. 炎熱（高溫）</span>
+              <span style="color:#fb8c00;">☀️ B. 溫暖</span>
+              <span style="color:#43a047;">🍃 C. 清涼</span>
+              <span style="color:#1e88e5;">❄️ D. 寒冷（低溫）</span>
+            </div>
+          </div>
+
+          <input type="range" class="slider-big" id="s2-slider" min="1" max="4" step="1" value="3" oninput="updateThermoSlider(this.value)">
+          <button class="lock-btn" onclick="submitThermo()">🎯 確定氣溫！</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 第三關：科學泡泡陣 -->
+    <div id="screen-stage3" class="screen">
+      <div class="stage-header">
+        <span class="stage-badge">最終關：科學泡泡陣 (<span id="s3-progress">1</span>/5)</span>
+        <span class="stage-goal">戳破正確的詞語泡泡，完成科學結論！</span>
+      </div>
+
+      <div class="boss-box">
+        <div class="boss-avatar">🦉🎓</div>
+        <div style="font-size:18px; color:#f57f17; font-weight:bold;">貓頭鷹博士考考你：</div>
+        <div class="sentence-display" id="s3-sentence">
+          當天氣<strong>炎熱</strong>，溫度會很 <span class="highlight-blank">？</span> 。
+        </div>
+        <div class="bubble-options" id="s3-options">
+          <!-- 動態生成泡泡按鈕 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. 勝利畫面 -->
+    <div id="screen-victory" class="screen victory-screen">
+      <div class="trophy">🏆</div>
+      <h1 style="color:#e65100; font-size:34px; margin:8px 0;">恭喜通關！氣溫科學小博士！</h1>
+      <div class="stars-earned" id="final-stars">⭐⭐⭐⭐⭐</div>
+      <div style="font-size:22px; font-weight:bold; color:#0277bd;">總得分：<span id="final-score">0</span> 顆星星</div>
+
+      <div class="summary-board">
+        <strong>📘 今天的科學大發現：</strong><br>
+        ✅ 我們可以用<strong>「炎熱、溫暖、清涼、寒冷」</strong>來描述<strong>氣溫</strong>。<br>
+        ✅ 當天氣<strong>炎熱</strong>，溫度會很<strong>高</strong>，我們適合穿<strong>薄衣物</strong>。<br>
+        ✅ 當天氣<strong>寒冷</strong>，溫度會很<strong>低</strong>，我們要多穿<strong>厚外套</strong>保暖。<br>
+        ✅ 生活應用：我們要根據<strong>氣溫的高低</strong>，選擇適合穿著的衣物！
+      </div>
+
+      <button class="big-play-btn" onclick="startGame()">🔄 再玩一次！</button>
+    </div>
+
+  </div>
+
+<script>
+  // --- 音效系統 (Web Audio API 離線合成，免外部檔案) ---
+  let soundEnabled = true;
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  let audioCtx = null;
+
+  function playTone(freq, type, duration, delay = 0) {
+    if (!soundEnabled) return;
+    if (!audioCtx) audioCtx = new AudioCtx();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+    gain.gain.setValueAtTime(0.18, audioCtx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(audioCtx.currentTime + delay);
+    osc.stop(audioCtx.currentTime + delay + duration);
+  }
+
+  function sfxCorrect() {
+    playTone(523.25, 'sine', 0.12, 0);    // C5
+    playTone(659.25, 'sine', 0.12, 0.1);  // E5
+    playTone(783.99, 'sine', 0.25, 0.2);  // G5
+  }
+
+  function sfxWrong() {
+    playTone(220, 'sawtooth', 0.18, 0);
+    playTone(180, 'sawtooth', 0.25, 0.15);
+  }
+
+  function sfxWin() {
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    notes.forEach((n, i) => playTone(n, 'triangle', 0.25, i * 0.12));
+  }
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    document.getElementById('sound-toggle').textContent = soundEnabled ? '🔊' : '🔇';
+  }
+
+  // --- 特效與提示 ---
+  function showToast(msg, isGood = true) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.background = isGood ? '#2e7d32' : '#c62828';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1600);
+  }
+
+  function spawnConfetti() {
+    const colors = ['#ff5252', '#ffca28', '#66bb6a', '#42a5f5', '#ab47bc'];
+    for (let i = 0; i < 35; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+
+  // --- 遊戲狀態 ---
+  let score = 0;
+  let combo = 0;
+
+  function addScore(pts) {
+    combo++;
+    const bonus = combo >= 3 ? 5 : 0;
+    score += pts + bonus;
+    document.getElementById('score').textContent = score;
+    document.getElementById('combo').textContent = combo;
+  }
+
+  function resetCombo() {
+    combo = 0;
+    document.getElementById('combo').textContent = combo;
+  }
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function startGame() {
+    score = 0;
+    combo = 0;
+    document.getElementById('score').textContent = 0;
+    document.getElementById('combo').textContent = 0;
+    initStage1();
+    showScreen('screen-stage1');
+  }
+
+  // --- 第一關資料與邏輯 ---
+  const stage1Data = [
+    {
+      id: 'A',
+      sky: '☀️🔥',
+      temp: 'A. 炎熱（高溫）',
+      bg: 'linear-gradient(135deg, #ff5722, #ff9800)',
+      face: '🥵',
+      speech: '「太陽好猛烈，一直流汗！快幫我選通爽的衣服！」',
+      doneOutfit: '🎽🩳',
+      doneSpeech: '「太涼快了！背心和短褲最適合炎熱的天氣！」'
+    },
+    {
+      id: 'D',
+      sky: '❄️🌬️',
+      temp: 'D. 寒冷（低溫）',
+      bg: 'linear-gradient(135deg, #1565c0, #42a5f5)',
+      face: '🥶',
+      speech: '「好冷啊，寒風吹得我發抖！快幫我保暖！」',
+      doneOutfit: '🧣🧥',
+      doneSpeech: '「好暖和呀！戴冷帽和穿厚大衣就不怕冷了！」'
+    },
+    {
+      id: 'C',
+      sky: '🍃☁️',
+      temp: 'C. 清涼',
+      bg: 'linear-gradient(135deg, #2e7d32, #66bb6a)',
+      face: '😮‍💨',
+      speech: '「吹來一陣涼風，有點涼意呢，穿什麼好？」',
+      doneOutfit: '🧥👖',
+      doneSpeech: '「剛剛好！加一件薄外套既舒服又不會著涼！」'
+    },
+    {
+      id: 'B',
+      sky: '🌤️🌼',
+      temp: 'B. 溫暖',
+      bg: 'linear-gradient(135deg, #f57c00, #ffca28)',
+      face: '😊',
+      speech: '「天氣和暖舒適，不冷也不熱，準備出門玩囉！」',
+      doneOutfit: '👕👖',
+      doneSpeech: '「短袖襯衫配長褲最輕鬆自在啦！」'
+    }
+  ];
+  let s1Index = 0;
+  let s1Locked = false;
+
+  function initStage1() {
+    s1Index = 0;
+    s1Locked = false;
+    renderStage1();
+  }
+
+  function renderStage1() {
+    const q = stage1Data[s1Index];
+    document.getElementById('s1-progress').textContent = s1Index + 1;
+    document.getElementById('weather-window').style.background = q.bg;
+    document.getElementById('w-sky').textContent = q.sky;
+    document.getElementById('w-temp').textContent = q.temp;
+    document.getElementById('kid-face').textContent = q.face;
+    document.getElementById('kid-outfit').textContent = '❓';
+    document.getElementById('kid-speech').textContent = q.speech;
+    document.querySelectorAll('.outfit-btn').forEach(b => b.classList.remove('pop', 'shake'));
+  }
+
+  function chooseOutfit(choice, btn) {
+    if (s1Locked) return;
+    const q = stage1Data[s1Index];
+    if (choice === q.id) {
+      s1Locked = true;
+      sfxCorrect();
+      addScore(10);
+      btn.classList.add('pop');
+      document.getElementById('kid-face').textContent = '😄';
+      document.getElementById('kid-outfit').textContent = q.doneOutfit;
+      document.getElementById('kid-speech').textContent = q.doneSpeech;
+      showToast('⭐ 穿搭滿分！+10 星星！', true);
+      spawnConfetti();
+
+      setTimeout(() => {
+        s1Index++;
+        s1Locked = false;
+        if (s1Index < stage1Data.length) {
+          renderStage1();
+        } else {
+          initStage2();
+          showScreen('screen-stage2');
+        }
+      }, 1500);
+    } else {
+      sfxWrong();
+      resetCombo();
+      btn.classList.add('shake');
+      showToast('❌ 哎呀，這樣穿會太冷或太熱喔，再試一次！', false);
+      setTimeout(() => btn.classList.remove('shake'), 450);
+    }
+  }
+
+  // --- 第二關資料與邏輯 ---
+  const stage2Data = [
+    {
+      targetVal: '1', // 1:寒冷, 2:清涼, 3:溫暖, 4:炎熱
+      icon: '🧣🧥',
+      desc: '小朋友戴著冷帽、穿著厚外套和圍巾，氣溫很低！<br>請把溫度計調到正確的氣溫：'
+    },
+    {
+      targetVal: '4',
+      icon: '🎽🩳',
+      desc: '小朋友穿著背心和短褲，太陽猛烈，氣溫很高！<br>請把溫度計調到正確的氣溫：'
+    },
+    {
+      targetVal: '2',
+      icon: '🧥👖',
+      desc: '秋風吹來帶點涼意，小朋友加了一件薄外套！<br>請把溫度計調到正確的氣溫：'
+    },
+    {
+      targetVal: '3',
+      icon: '👕👖',
+      desc: '天氣和暖舒適，小朋友穿著短袖襯衫和長褲！<br>請把溫度計調到正確的氣溫：'
+    }
+  ];
+  let s2Index = 0;
+
+  const thermoMap = {
+    '1': { label: 'D. 寒冷（低溫）', height: '22%', color: '#1e88e5' },
+    '2': { label: 'C. 清涼', height: '48%', color: '#43a047' },
+    '3': { label: 'B. 溫暖', height: '74%', color: '#fb8c00' },
+    '4': { label: 'A. 炎熱（高溫）', height: '96%', color: '#e53935' }
+  };
+
+  function initStage2() {
+    s2Index = 0;
+    renderStage2();
+  }
+
+  function renderStage2() {
+    const q = stage2Data[s2Index];
+    document.getElementById('s2-progress').textContent = s2Index + 1;
+    document.getElementById('s2-icon').textContent = q.icon;
+    document.getElementById('s2-desc').innerHTML = q.desc;
+    document.getElementById('s2-slider').value = '3';
+    updateThermoSlider('3');
+  }
+
+  function updateThermoSlider(val) {
+    const info = thermoMap[val];
+    const lbl = document.getElementById('s2-current-label');
+    const merc = document.getElementById('s2-mercury');
+    lbl.textContent = info.label;
+    lbl.style.color = info.color;
+    merc.style.height = info.height;
+    merc.style.background = info.color;
+  }
+
+  function submitThermo() {
+    const current = document.getElementById('s2-slider').value;
+    const q = stage2Data[s2Index];
+    if (current === q.targetVal) {
+      sfxCorrect();
+      addScore(15);
+      showToast('🌡️ 溫度計調校完全正確！+15 星星！', true);
+      spawnConfetti();
+      s2Index++;
+      if (s2Index < stage2Data.length) {
+        setTimeout(renderStage2, 900);
+      } else {
+        setTimeout(() => {
+          initStage3();
+          showScreen('screen-stage3');
+        }, 1000);
+      }
+    } else {
+      sfxWrong();
+      resetCombo();
+      showToast('❌ 溫度還不對喔，看看小朋友的衣服再調調看！', false);
+    }
+  }
+
+  // --- 第三關資料與邏輯 ---
+  const stage3Data = [
+    {
+      sentence: '1. 當天氣<strong>炎熱</strong>，溫度會很 <span class="highlight-blank">？</span> 。',
+      options: ['高', '低', '清涼'],
+      answer: '高'
+    },
+    {
+      sentence: '2. 當天氣<strong>炎熱</strong>，我們適合穿 <span class="highlight-blank">？</span> 。',
+      options: ['厚外套', '薄衣物', '冷帽'],
+      answer: '薄衣物'
+    },
+    {
+      sentence: '3. 當天氣<strong>寒冷</strong>，溫度會很 <span class="highlight-blank">？</span> 。',
+      options: ['高', '低', '溫暖'],
+      answer: '低'
+    },
+    {
+      sentence: '4. 當天氣<strong>寒冷</strong>，我們要多穿 <span class="highlight-blank">？</span> 保暖。',
+      options: ['背心', '短褲', '厚外套'],
+      answer: '厚外套'
+    },
+    {
+      sentence: '5. 我們可以用「炎熱、溫暖、清涼、寒冷」來描述 <span class="highlight-blank">？</span> 。',
+      options: ['風向', '氣溫', '雨量'],
+      answer: '氣溫'
+    }
+  ];
+  let s3Index = 0;
+
+  function initStage3() {
+    s3Index = 0;
+    renderStage3();
+  }
+
+  function renderStage3() {
+    const q = stage3Data[s3Index];
+    document.getElementById('s3-progress').textContent = s3Index + 1;
+    document.getElementById('s3-sentence').innerHTML = q.sentence;
+    const optDiv = document.getElementById('s3-options');
+    optDiv.innerHTML = '';
+    q.options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'bubble-btn';
+      btn.textContent = '🫧 ' + opt;
+      btn.onclick = () => checkBubble(opt, btn);
+      optDiv.appendChild(btn);
+    });
+  }
+
+  function checkBubble(choice, btn) {
+    const q = stage3Data[s3Index];
+    if (choice === q.answer) {
+      sfxCorrect();
+      addScore(20);
+      document.querySelector('.highlight-blank').textContent = choice;
+      document.querySelector('.highlight-blank').style.background = '#c8e6c9';
+      document.querySelector('.highlight-blank').style.color = '#1b5e20';
+      showToast('🎉 答對了！科學結論完全正確！', true);
+      spawnConfetti();
+      s3Index++;
+      setTimeout(() => {
+        if (s3Index < stage3Data.length) {
+          renderStage3();
+        } else {
+          finishGame();
+        }
+      }, 1000);
+    } else {
+      sfxWrong();
+      resetCombo();
+      btn.style.background = '#e53935';
+      showToast('💭 再想一想喔，戳另一個泡泡試試看！', false);
+    }
+  }
+
+  function finishGame() {
+    sfxWin();
+    spawnConfetti();
+    setTimeout(spawnConfetti, 600);
+    document.getElementById('final-score').textContent = score;
+    showScreen('screen-victory');
+  }
+</script>
+</body>
+</html>
