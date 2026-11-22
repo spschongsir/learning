@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>摩擦力大挑戰：科學探究實驗室</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* 全局字體與防誤觸設定 (針對 iOS 與 Android 優化) */
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #fef9c3 100%);
+            overscroll-behavior: none;
+        }
+
+        /* 禁止拖曳區域觸發瀏覽器滾動或縮放 */
+        .touch-area {
+            touch-action: none;
+        }
+
+        /* 卡通按鈕立體感與按壓動畫 */
+        .btn-cartoon {
+            transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.1s ease;
+            box-shadow: 0 5px 0 rgba(0, 0, 0, 0.2);
+        }
+        .btn-cartoon:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+        }
+        .btn-cartoon:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 3px 0 rgba(0, 0, 0, 0.15);
+        }
+
+        /* 材質紋理背景 */
+        .mat-desk {
+            background: linear-gradient(180deg, #93c5fd 0%, #60a5fa 100%);
+            border-bottom: 6px solid #2563eb;
+        }
+        .mat-cardboard {
+            background-color: #d97706;
+            background-image: repeating-linear-gradient(90deg, #b45309 0px, #b45309 4px, #d97706 4px, #d97706 10px);
+            border-bottom: 6px solid #78350f;
+        }
+        .mat-sandpaper {
+            background-color: #374151;
+            background-image: radial-gradient(#9ca3af 1.2px, transparent 1.2px), radial-gradient(#1f2937 1.2px, #374151 1.2px);
+            background-size: 8px 8px;
+            background-position: 0 0, 4px 4px;
+            border-bottom: 6px solid #111827;
+        }
+        .mat-antislip {
+            background-color: #fef3c7;
+            background-image: 
+                linear-gradient(45deg, #f59e0b 25%, transparent 25%), 
+                linear-gradient(-45deg, #f59e0b 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #f59e0b 75%), 
+                linear-gradient(-45deg, transparent 75%, #f59e0b 75%);
+            background-size: 12px 12px;
+            background-position: 0 0, 0 6px, 6px -6px, -6px 0px;
+            border-bottom: 6px solid #b45309;
+        }
+
+        /* 彈跳與浮動動畫 */
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-float {
+            animation: floatSlow 2.5s ease-in-out infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(250, 204, 21, 0.4)); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.9)); }
+        }
+        .animate-pulse-glow {
+            animation: pulseGlow 1.5s infinite;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px) rotate(-2deg); }
+            75% { transform: translateX(6px) rotate(2deg); }
+        }
+        .animate-shake {
+            animation: shake 0.35s ease-in-out;
+        }
+
+        /* 賽車輪胎旋轉動畫 */
+        @keyframes spinTire {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .tire-spin {
+            animation: spinTire 0.35s linear infinite;
+        }
+        .tire-spin-fast {
+            animation: spinTire 0.12s linear infinite;
+        }
+
+        /* 自訂細滾動條（僅在極小螢幕內容溢出時使用） */
+        .custom-scroll::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.4);
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen w-screen overflow-hidden text-slate-800">
+
+    <!-- 粒子特效畫布 -->
+    <canvas id="particleCanvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
+
+    <!-- 頂部導航與狀態欄 -->
+    <header class="flex-none bg-white/90 backdrop-blur-md border-b-4 border-sky-300 px-3 py-2 sm:px-6 flex items-center justify-between shadow-sm z-30">
+        <div class="flex items-center gap-2">
+            <div class="w-9 h-9 sm:w-10 sm:h-10 bg-amber-400 rounded-2xl flex items-center justify-center text-xl sm:text-2xl shadow-inner border-2 border-amber-500">
+                🔬
+            </div>
+            <div>
+                <h1 class="text-base sm:text-xl font-black text-sky-900 leading-tight tracking-wide">摩擦力大挑戰</h1>
+                <p class="text-[11px] sm:text-xs font-bold text-sky-600">活動5：摩擦力的產生和方向</p>
+            </div>
+        </div>
+
+        <!-- 關卡進度指示器 -->
+        <div id="stageNav" class="hidden sm:flex items-center gap-2 bg-sky-100/80 p-1.5 rounded-2xl border border-sky-200">
+            <button onclick="switchStage(1)" id="navBtn1" class="px-3 py-1 rounded-xl text-xs font-bold transition bg-sky-600 text-white shadow">1. 拉力計實驗</button>
+            <button onclick="switchStage(2)" id="navBtn2" class="px-3 py-1 rounded-xl text-xs font-bold transition text-sky-700 hover:bg-white/60">2. 方向大特搜</button>
+            <button onclick="switchStage(3)" id="navBtn3" class="px-3 py-1 rounded-xl text-xs font-bold transition text-sky-700 hover:bg-white/60">3. 輪胎小賽車</button>
+            <button onclick="switchStage(4)" id="navBtn4" class="px-3 py-1 rounded-xl text-xs font-bold transition text-sky-700 hover:bg-white/60">4. 探究結論</button>
+        </div>
+
+        <!-- 右側工具按鈕：音訊切換 & 實驗小貼士 -->
+        <div class="flex items-center gap-2">
+            <button id="soundToggleBtn" onclick="toggleSound()" aria-label="切換音效" class="btn-cartoon w-10 h-10 bg-emerald-400 hover:bg-emerald-300 text-white rounded-2xl flex items-center justify-center text-lg border-2 border-emerald-600">
+                🔊
+            </button>
+            <button onclick="showHomeModal()" aria-label="返回主畫面" class="btn-cartoon px-3 h-10 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black rounded-2xl text-xs sm:text-sm border-2 border-amber-600">
+                主選單
+            </button>
+        </div>
+    </header>
+
+    <!-- 手機版關卡快捷列 -->
+    <div id="mobileStageNav" class="flex sm:hidden flex-none bg-sky-100 border-b-2 border-sky-200 px-2 py-1 justify-around text-[11px] font-bold z-20">
+        <button onclick="switchStage(1)" id="mNavBtn1" class="px-2 py-1 rounded-lg bg-sky-600 text-white">① 實驗室</button>
+        <button onclick="switchStage(2)" id="mNavBtn2" class="px-2 py-1 rounded-lg text-sky-800">② 找方向</button>
+        <button onclick="switchStage(3)" id="mNavBtn3" class="px-2 py-1 rounded-lg text-sky-800">③ 輪胎賽車</button>
+        <button onclick="switchStage(4)" id="mNavBtn4" class="px-2 py-1 rounded-lg text-sky-800">④ 總結證書</button>
+    </div>
+
+    <!-- 主遊戲視窗容器 -->
+    <main class="flex-1 relative w-full h-full overflow-hidden flex flex-col">
+
+        <!-- ==================== 歡迎封面畫面 ==================== -->
+        <section id="welcomeScreen" class="absolute inset-0 z-40 bg-gradient-to-b from-sky-200 via-blue-100 to-amber-100 flex flex-col items-center justify-center p-4 text-center">
+            <div class="max-w-lg w-full bg-white/95 rounded-3xl p-6 sm:p-8 shadow-2xl border-4 border-sky-400 relative overflow-hidden">
+                <div class="inline-block bg-amber-400 text-amber-950 font-black px-4 py-1 rounded-full text-xs sm:text-sm mb-3 border-2 border-amber-600 shadow-sm">
+                    香港小學科學科 • 互動探究工作紙
+                </div>
+                <h2 class="text-2xl sm:text-4xl font-black text-sky-900 mb-2 tracking-tight">
+                    摩擦力大挑戰！<br><span class="text-orange-500">科學探究實驗室</span>
+                </h2>
+                <p class="text-slate-600 text-sm sm:text-base font-medium mb-5">
+                    齊來動手拉動電子拉力計、用放大鏡觀察微觀阻力，並為小賽車換上最強防滑輪胎！
+                </p>
+
+                <!-- 封面卡通插圖 SVG -->
+                <div class="w-full h-36 sm:h-44 bg-sky-50 rounded-2xl border-2 border-sky-200 mb-5 flex items-center justify-center relative overflow-hidden">
+                    <svg viewBox="0 0 360 130" class="w-full h-full">
+                        <!-- 桌面 -->
+                        <rect x="20" y="95" width="320" height="18" rx="6" fill="#60a5fa" stroke="#2563eb" stroke-width="3"/>
+                        <!-- 木塊 -->
+                        <g class="animate-float">
+                            <rect x="65" y="55" width="75" height="40" rx="6" fill="#fbbf24" stroke="#b45309" stroke-width="3"/>
+                            <circle cx="85" cy="70" r="3" fill="#78350f"/>
+                            <circle cx="115" cy="70" r="3" fill="#78350f"/>
+                            <path d="M95 80 Q100 86 105 80" stroke="#78350f" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                            <!-- 掛鉤 -->
+                            <path d="M140 75 L155 75" stroke="#475569" stroke-width="4"/>
+                            <!-- 電子拉力計 -->
+                            <rect x="155" y="58" width="95" height="34" rx="8" fill="#334155" stroke="#0f172a" stroke-width="3"/>
+                            <rect x="165" y="64" width="48" height="22" rx="4" fill="#a7f3d0"/>
+                            <text x="189" y="79" font-size="13" font-weight="900" fill="#065f46" text-anchor="middle">2.5 N</text>
+                            <circle cx="232" cy="75" r="8" fill="#ef4444"/>
+                            <!-- 拉力箭頭 -->
+                            <path d="M260 75 L305 75 L295 65 M305 75 L295 85" stroke="#ef4444" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                            <text x="285" y="56" font-size="12" font-weight="900" fill="#dc2626" text-anchor="middle">拉力</text>
+                            <!-- 摩擦力箭頭 -->
+                            <path d="M110 105 L55 105 L65 98 M55 105 L65 112" stroke="#2563eb" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                            <text x="82" y="124" font-size="11" font-weight="900" fill="#1d4ed8" text-anchor="middle">摩擦力 (阻力)</text>
+                        </g>
+                    </svg>
+                </div>
+
+                <button onclick="startGame()" class="btn-cartoon w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-black text-xl sm:text-2xl rounded-2xl border-2 border-orange-700 tracking-wider">
+                    🚀 開始科學探究！
+                </button>
+            </div>
+        </section>
+
+        <!-- ==================== 第一關：虛擬拉力計實驗室 ==================== -->
+        <section id="stage1" class="hidden flex-1 flex flex-col lg:flex-row p-2 sm:p-4 gap-2 sm:gap-4 overflow-hidden">
+            
+            <!-- 左側/上方：互動實驗台區域 -->
+            <div class="flex-[1.3] bg-white rounded-3xl border-4 border-sky-300 shadow-lg flex flex-col justify-between p-3 sm:p-4 relative overflow-hidden">
+                <!-- 提示橫幅 & 砝碼控制 -->
+                <div class="flex flex-wrap items-center justify-between gap-2 z-10">
+                    <div class="bg-sky-100 border-2 border-sky-300 px-3 py-1.5 rounded-2xl flex items-center gap-2">
+                        <span class="text-lg">👆</span>
+                        <span id="labInstruction" class="text-xs sm:text-sm font-bold text-sky-900">
+                            請用手指按住「電子拉力計」向右拖拉，直至木塊滑動！
+                        </span>
+                    </div>
+
+                    <!-- 砝碼增減器 (扣緊材料：木塊、砝碼) -->
+                    <div class="flex items-center gap-1.5 bg-amber-50 border-2 border-amber-300 px-2.5 py-1 rounded-2xl">
+                        <span class="text-xs font-bold text-amber-900">砝碼重量：</span>
+                        <button onclick="changeWeights(-1)" class="btn-cartoon w-7 h-7 bg-amber-400 text-amber-950 font-black rounded-lg text-sm border border-amber-600">-</button>
+                        <span id="weightCountDisplay" class="text-xs sm:text-sm font-black text-amber-800 px-1">標準 (0個)</span>
+                        <button onclick="changeWeights(1)" class="btn-cartoon w-7 h-7 bg-amber-400 text-amber-950 font-black rounded-lg text-sm border border-amber-600">+</button>
+                    </div>
+                </div>
+
+                <!-- 4種物料選擇按鈕列 (工作紙第2頁表格) -->
+                <div class="grid grid-cols-4 gap-1.5 sm:gap-2 my-2 z-10">
+                    <button onclick="selectMaterial('desk')" id="matBtn-desk" class="btn-cartoon py-2 px-1 rounded-2xl border-2 border-blue-600 bg-blue-500 text-white font-bold text-xs sm:text-sm flex flex-col items-center">
+                        <span>1. 學生桌面</span>
+                        <span class="text-[10px] opacity-90 font-normal">較光滑</span>
+                    </button>
+                    <button onclick="selectMaterial('cardboard')" id="matBtn-cardboard" class="btn-cartoon py-2 px-1 rounded-2xl border-2 border-amber-700 bg-white text-amber-900 font-bold text-xs sm:text-sm flex flex-col items-center">
+                        <span>2. 瓦通紙</span>
+                        <span class="text-[10px] text-slate-500 font-normal">較粗糙</span>
+                    </button>
+                    <button onclick="selectMaterial('sandpaper')" id="matBtn-sandpaper" class="btn-cartoon py-2 px-1 rounded-2xl border-2 border-slate-700 bg-white text-slate-800 font-bold text-xs sm:text-sm flex flex-col items-center">
+                        <span>3. 粗砂砂紙</span>
+                        <span class="text-[10px] text-slate-500 font-normal">較粗糙</span>
+                    </button>
+                    <button onclick="selectMaterial('antislip')" id="matBtn-antislip" class="btn-cartoon py-2 px-1 rounded-2xl border-2 border-yellow-600 bg-white text-yellow-900 font-bold text-xs sm:text-sm flex flex-col items-center">
+                        <span>4. 防滑膠墊</span>
+                        <span class="text-[10px] text-slate-500 font-normal">較粗糙</span>
+                    </button>
+                </div>
+
+                <!-- 核心觸控實驗畫布區 (Touch-Action: None) -->
+                <div id="experimentArena" class="touch-area flex-1 relative bg-gradient-to-b from-sky-50 to-slate-100 rounded-2xl border-2 border-dashed border-sky-300 overflow-hidden flex flex-col justify-end min-h-[180px]">
+                    
+                    <!-- 即時浮動狀態標籤 -->
+                    <div id="forceFeedbackBadge" class="absolute top-2 left-3 bg-white/95 px-3 py-1 rounded-xl border-2 border-slate-300 shadow-sm text-xs sm:text-sm font-black text-slate-700 transition-all">
+                        狀態：靜止待命中 (請向右拖拉拉力計)
+                    </div>
+
+                    <!-- 施力與摩擦力動態方向箭頭提示 -->
+                    <div id="dynamicArrows" class="absolute top-11 left-3 flex items-center gap-3 opacity-0 transition-opacity duration-200 pointer-events-none">
+                        <span class="bg-red-100 text-red-700 border border-red-400 px-2 py-0.5 rounded-lg text-xs font-black">施力方向 ➔</span>
+                        <span class="bg-blue-100 text-blue-700 border border-blue-400 px-2 py-0.5 rounded-lg text-xs font-black">⬅ 摩擦力(阻力)</span>
+                    </div>
+
+                    <!-- 可移動的組合：木塊 + 砝碼 + 連接線 + 電子拉力計 -->
+                    <div id="sliderAssembly" class="relative flex items-end mb-0 transition-transform duration-75" style="left: 16px; bottom: 0px;">
+                        
+                        <!-- 木塊本體 -->
+                        <div id="woodBlock" class="relative w-24 sm:w-28 h-16 sm:h-20 bg-gradient-to-b from-amber-300 to-amber-500 border-4 border-amber-800 rounded-xl shadow-md flex flex-col items-center justify-center z-10">
+                            <!-- 木塊孔洞裝飾 (還原工作紙圖片上的多孔木塊) -->
+                            <div class="flex gap-2 mb-1">
+                                <div class="w-4 h-4 rounded-full bg-amber-700/60 border border-amber-900"></div>
+                                <div class="w-4 h-4 rounded-full bg-amber-700/60 border border-amber-900"></div>
+                            </div>
+                            <span class="text-xs font-black text-amber-950">木塊</span>
+
+                            <!-- 放在木塊上的砝碼容器 -->
+                            <div id="weightsOnBlock" class="absolute -top-6 flex gap-1 items-end">
+                                <!-- 動態生成砝碼 -->
+                            </div>
+
+                            <!-- 向左的摩擦力箭頭 (拉動時出現) -->
+                            <div id="frictionArrowVisual" class="hidden absolute -left-2 bottom-1 -translate-x-full flex items-center">
+                                <div class="bg-blue-600 text-white text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-l-lg shadow whitespace-nowrap">
+                                    ⬅ 摩擦力
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 連接掛鉤與彈簧繩 -->
+                        <div id="springConnector" class="h-2 bg-slate-600 mb-7 transition-all" style="width: 18px;"></div>
+
+                        <!-- 電子拉力計 (可拖曳把手) -->
+                        <div id="dynamometerHandle" class="cursor-grab active:cursor-grabbing relative mb-3 flex items-center bg-slate-800 border-4 border-slate-950 rounded-2xl p-1.5 sm:p-2 shadow-xl z-20 animate-pulse-glow">
+                            <!-- 掛鉤環 -->
+                            <div class="w-3 h-5 border-4 border-slate-400 rounded-l-full -ml-3 mr-1"></div>
+                            <!-- 電子液晶螢幕 (還原工作紙 SanLiang 拉力計) -->
+                            <div class="bg-emerald-200 border-2 border-emerald-600 rounded-lg px-2 py-1 text-center min-w-[68px] sm:min-w-[82px]">
+                                <div class="text-[9px] font-bold text-emerald-900 leading-none">拉力計 (N)</div>
+                                <div id="forceMeterValue" class="text-base sm:text-xl font-black text-emerald-950 font-mono leading-tight">0.0</div>
+                            </div>
+                            <!-- 手指拖拉把手提示 -->
+                            <div class="ml-1.5 bg-red-500 text-white rounded-xl px-2 py-1.5 flex flex-col items-center justify-center shadow-inner">
+                                <span class="text-xs sm:text-sm font-black">拉我➔</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 實驗桌面物料層 -->
+                    <div id="surfaceLayer" class="w-full h-9 mat-desk flex items-center justify-between px-4 transition-colors duration-300">
+                        <span id="surfaceLabel" class="text-xs font-black text-white drop-shadow">目前表面：1. 學生桌面（較光滑）</span>
+                        <span class="text-[11px] font-bold text-white/90">終點線 🏁</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側/下方：工作紙觀察及記錄表 + 過關按鈕 -->
+            <div class="flex-1 bg-white rounded-3xl border-4 border-emerald-300 shadow-lg p-3 sm:p-4 flex flex-col justify-between overflow-y-auto custom-scroll">
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-base sm:text-lg font-black text-emerald-900 flex items-center gap-1.5">
+                            📋 觀察及記錄表
+                        </h3>
+                        <span id="recordProgress" class="bg-emerald-100 text-emerald-800 text-xs font-black px-2.5 py-1 rounded-full border border-emerald-300">
+                            已完成 0 / 4 項
+                        </span>
+                    </div>
+
+                    <!-- 還原工作紙第2頁的記錄表 -->
+                    <div class="overflow-hidden rounded-2xl border-2 border-emerald-600">
+                        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                            <thead>
+                                <tr class="bg-emerald-600 text-white">
+                                    <th class="py-2 px-2.5 font-bold">物料</th>
+                                    <th class="py-2 px-2 font-bold text-center">表面</th>
+                                    <th class="py-2 px-2.5 font-bold text-right">拉力計讀數(N)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-emerald-200 font-bold">
+                                <tr id="row-desk" class="bg-blue-50/70 transition-colors">
+                                    <td class="py-2 px-2.5">1. 學生桌面</td>
+                                    <td class="py-2 px-2 text-center text-sky-700">較光滑</td>
+                                    <td id="val-desk" class="py-2 px-2.5 text-right font-mono text-slate-400">待測試...</td>
+                                </tr>
+                                <tr id="row-cardboard" class="bg-white transition-colors">
+                                    <td class="py-2 px-2.5">2. 瓦通紙</td>
+                                    <td class="py-2 px-2 text-center text-amber-700">較粗糙</td>
+                                    <td id="val-cardboard" class="py-2 px-2.5 text-right font-mono text-slate-400">待測試...</td>
+                                </tr>
+                                <tr id="row-sandpaper" class="bg-emerald-50/40 transition-colors">
+                                    <td class="py-2 px-2.5">3. 粗砂砂紙</td>
+                                    <td class="py-2 px-2 text-center text-amber-700">較粗糙</td>
+                                    <td id="val-sandpaper" class="py-2 px-2.5 text-right font-mono text-slate-400">待測試...</td>
+                                </tr>
+                                <tr id="row-antislip" class="bg-white transition-colors">
+                                    <td class="py-2 px-2.5">4. 防滑膠墊</td>
+                                    <td class="py-2 px-2 text-center text-amber-700">較粗糙</td>
+                                    <td id="val-antislip" class="py-2 px-2.5 text-right font-mono text-slate-400">待測試...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 科學小發現提示卡 -->
+                    <div class="mt-2.5 bg-amber-50 border-2 border-amber-300 rounded-2xl p-2.5 text-xs text-amber-950 font-medium">
+                        💡 <strong>想一想：</strong>比較「學生桌面」和「防滑膠墊」的讀數，哪一種表面需要的拉力較大？為什麼？
+                    </div>
+                </div>
+
+                <!-- 進入第二關按鈕 -->
+                <button id="toStage2Btn" onclick="switchStage(2)" disabled class="btn-cartoon mt-3 w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-black text-sm sm:text-base rounded-2xl border-2 border-emerald-700">
+                    完成4項測試即可解鎖第二關 🔒
+                </button>
+            </div>
+        </section>
+
+        <!-- ==================== 第二關：摩擦力方向大特搜 ==================== -->
+        <section id="stage2" class="hidden flex-1 flex flex-col p-2 sm:p-4 gap-2 sm:gap-3 overflow-y-auto custom-scroll">
+            <div class="max-w-4xl w-full mx-auto bg-white rounded-3xl border-4 border-purple-300 shadow-xl p-3 sm:p-5 flex-1 flex flex-col justify-between">
+                
+                <!-- 關卡標題與題號 -->
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b-2 border-purple-100 pb-2">
+                    <div>
+                        <span class="bg-purple-600 text-white text-xs font-black px-2.5 py-1 rounded-full">第二關：結果與分析</span>
+                        <h3 class="text-lg sm:text-xl font-black text-purple-950 mt-1">🔍 摩擦力方向大特搜</h3>
+                    </div>
+                    <div class="bg-purple-100 px-3 py-1 rounded-2xl border border-purple-300 text-xs sm:text-sm font-black text-purple-900">
+                        題目：<span id="q2Index">1</span> / 4
+                    </div>
+                </div>
+
+                <!-- 互動情境區 + 放大鏡微觀摩擦圖 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 my-2 items-center">
+                    
+                    <!-- 左側：動態運動情境圖 -->
+                    <div class="bg-sky-50 rounded-2xl border-2 border-sky-300 p-3 flex flex-col items-center justify-center relative min-h-[175px]">
+                        <div id="q2ScenarioTitle" class="text-sm sm:text-base font-black text-sky-950 mb-2 text-center">
+                            情境 1：小明用拉力計「向右」拉動木塊
+                        </div>
+                        
+                        <!-- 動態 SVG 情境展示 -->
+                        <div id="q2SvgContainer" class="w-full h-28 flex items-center justify-center">
+                            <!-- 由 JS 動態渲染情境 SVG -->
+                        </div>
+
+                        <div id="q2MotionHint" class="mt-1 bg-red-100 text-red-800 px-3 py-0.5 rounded-full text-xs font-black border border-red-300">
+                            物體運動方向：向右 (➡)
+                        </div>
+                    </div>
+
+                    <!-- 右側：放大鏡微觀摩擦特寫 (還原工作紙第2頁右下角微觀圖) -->
+                    <div class="bg-amber-50 rounded-2xl border-2 border-amber-300 p-3 flex flex-col items-center justify-center min-h-[175px]">
+                        <div class="text-xs font-black text-amber-900 mb-1 flex items-center gap-1">
+                            <span>🔎 放大鏡微觀世界：表面凹凸不平互相卡住！</span>
+                        </div>
+                        <svg viewBox="0 0 220 95" class="w-48 h-24 bg-white rounded-full border-4 border-amber-500 shadow-inner">
+                            <!-- 上方物體底部鋸齒 -->
+                            <path d="M10 35 L40 35 L50 48 L65 35 L80 50 L95 35 L110 48 L125 35 L140 50 L155 35 L170 48 L185 35 L210 35 L210 10 L10 10 Z" fill="#f59e0b"/>
+                            <!-- 下方接觸面鋸齒 -->
+                            <path d="M10 60 L35 60 L48 45 L62 60 L78 46 L92 60 L108 45 L122 60 L138 46 L152 60 L168 45 L182 60 L210 60 L210 88 L10 88 Z" fill="#64748b"/>
+                            <!-- 碰撞火花 -->
+                            <circle cx="79" cy="48" r="4" fill="#ef4444"/>
+                            <circle cx="139" cy="48" r="4" fill="#ef4444"/>
+                        </svg>
+                        <p class="text-[11px] sm:text-xs text-amber-900 font-bold text-center mt-1.5 leading-snug">
+                            兩個表面凹凸不平互相摩擦，產生阻礙物體移動的<span class="text-red-600 underline">阻力（摩擦力）</span>！
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 互動答題區：點選正確的摩擦力方向與分析 -->
+                <div class="bg-purple-50 rounded-2xl p-3 border-2 border-purple-200">
+                    <p id="q2Prompt" class="text-sm sm:text-base font-black text-purple-950 text-center mb-2.5">
+                        請問：此時阻止木塊移動的「摩擦力（阻力）」是向哪個方向？
+                    </p>
+                    <div id="q2Options" class="grid grid-cols-2 gap-2.5 max-w-xl mx-auto">
+                        <!-- 動態生成選項按鈕 -->
+                    </div>
+                    <div id="q2Feedback" class="hidden mt-2.5 p-2 rounded-xl text-center text-xs sm:text-sm font-black"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== 第三關：生活應用小賽車 ==================== -->
+        <section id="stage3" class="hidden flex-1 flex flex-col p-2 sm:p-4 gap-2 overflow-hidden">
+            <div class="max-w-4xl w-full mx-auto bg-white rounded-3xl border-4 border-orange-400 shadow-xl p-3 sm:p-4 flex-1 flex flex-col justify-between overflow-hidden">
+                
+                <!-- 頂部任務說明 (扣緊工作紙第3頁生活應用) -->
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <span class="bg-orange-500 text-white text-xs font-black px-2.5 py-0.5 rounded-full">第三關：生活應用</span>
+                        <h3 class="text-base sm:text-xl font-black text-slate-900">🏎️ 輪胎花紋大作戰：雨天濕滑賽道挑戰！</h3>
+                    </div>
+                    <div class="text-xs font-bold bg-amber-100 text-amber-900 px-3 py-1 rounded-xl border border-amber-300">
+                        問題：為什麼汽車輪胎表面會有花紋（很粗糙）？
+                    </div>
+                </div>
+
+                <!-- 步驟一：選擇輪胎裝備 -->
+                <div class="grid grid-cols-2 gap-2 sm:gap-4 my-1.5">
+                    <button onclick="selectTire('smooth')" id="tireBtn-smooth" class="btn-cartoon p-2 sm:p-3 rounded-2xl border-3 border-slate-400 bg-slate-100 flex items-center gap-2 sm:gap-3 text-left transition">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-700 border-4 border-slate-300 flex items-center justify-center flex-none">
+                            <div class="w-4 h-4 rounded-full bg-slate-200"></div>
+                        </div>
+                        <div>
+                            <div class="text-xs sm:text-sm font-black text-slate-800">A. 光滑無花紋輪胎</div>
+                            <div class="text-[11px] text-slate-600 font-bold">表面光滑 • 摩擦力小</div>
+                        </div>
+                    </button>
+
+                    <button onclick="selectTire('tread')" id="tireBtn-tread" class="btn-cartoon p-2 sm:p-3 rounded-2xl border-3 border-orange-500 bg-orange-50 flex items-center gap-2 sm:gap-3 text-left transition">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-900 border-4 border-dashed border-amber-400 flex items-center justify-center flex-none">
+                            <div class="w-4 h-4 rounded-full bg-amber-400"></div>
+                        </div>
+                        <div>
+                            <div class="text-xs sm:text-sm font-black text-orange-950">B. 深花紋粗糙輪胎</div>
+                            <div class="text-[11px] text-orange-700 font-bold">表面粗糙 • 摩擦力大</div>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- 賽道動畫區 -->
+                <div class="flex-1 relative bg-gradient-to-b from-sky-300 via-sky-100 to-slate-200 rounded-2xl border-2 border-slate-400 overflow-hidden flex flex-col justify-end min-h-[155px]">
+                    <!-- 天空雨滴裝飾 -->
+                    <div class="absolute top-2 left-3 bg-white/90 px-2.5 py-1 rounded-xl text-xs font-black text-sky-900 shadow-sm">
+                        🌧️ 路況：雨天濕滑柏油路
+                    </div>
+                    <div id="raceStatusText" class="absolute top-2 right-3 bg-slate-900/80 text-white px-3 py-1 rounded-xl text-xs font-black">
+                        請先選擇輪胎，再按住「踩油門」前進！
+                    </div>
+
+                    <!-- 小賽車 SVG -->
+                    <div id="raceCar" class="relative mb-1 transition-transform duration-75 z-10" style="left: 16px; width: 110px;">
+                        <svg viewBox="0 0 140 70" class="w-full h-auto overflow-visible">
+                            <!-- 車身 -->
+                            <path d="M15 45 L25 22 L85 22 L110 38 L130 42 L130 55 L10 55 L10 45 Z" fill="#ef4444" stroke="#991b1b" stroke-width="3" stroke-linejoin="round"/>
+                            <!-- 車窗 -->
+                            <path d="M32 26 L80 26 L98 38 L32 38 Z" fill="#bae6fd" stroke="#0284c7" stroke-width="2"/>
+                            <!-- 駕駛員笑臉 -->
+                            <circle cx="62" cy="33" r="6" fill="#fde047"/>
+                            <!-- 後輪 -->
+                            <g id="rearWheel" style="transform-origin: 35px 55px;">
+                                <circle cx="35" cy="55" r="13" fill="#1e293b" stroke="#0f172a" stroke-width="3"/>
+                                <circle id="rearTread" cx="35" cy="55" r="11" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="4 3" class="hidden"/>
+                                <circle cx="35" cy="55" r="5" fill="#cbd5e1"/>
+                            </g>
+                            <!-- 前輪 -->
+                            <g id="frontWheel" style="transform-origin: 105px 55px;">
+                                <circle cx="105" cy="55" r="13" fill="#1e293b" stroke="#0f172a" stroke-width="3"/>
+                                <circle id="frontTread" cx="105" cy="55" r="11" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="4 3" class="hidden"/>
+                                <circle cx="105" cy="55" r="5" fill="#cbd5e1"/>
+                            </g>
+                        </svg>
+                    </div>
+
+                    <!-- 賽道地面與終點旗幟 -->
+                    <div class="w-full h-10 bg-slate-700 border-t-4 border-slate-500 flex items-center justify-between px-4 relative">
+                        <span class="text-xs font-bold text-slate-300">起點 START</span>
+                        <div class="flex-1 border-b-2 border-dashed border-white/50 mx-4"></div>
+                        <span class="text-sm font-black text-amber-300 bg-slate-900 px-2.5 py-0.5 rounded-lg">🏁 終點線</span>
+                    </div>
+                </div>
+
+                <!-- 底部操作按鈕列 (支援觸控按住油門與煞車) -->
+                <div class="grid grid-cols-3 gap-2 sm:gap-3 mt-2">
+                    <button onclick="resetCar()" class="btn-cartoon py-3 bg-slate-200 hover:bg-slate-300 text-slate-800 font-black rounded-2xl text-xs sm:text-sm border-2 border-slate-400">
+                        🔄 重置起點
+                    </button>
+                    <button id="brakeBtn" onpointerdown="pressBrake(true)" onpointerup="pressBrake(false)" onpointerleave="pressBrake(false)" class="btn-cartoon py-3 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black rounded-2xl text-sm sm:text-base border-2 border-amber-600 touch-area">
+                        🛑 踩煞車
+                    </button>
+                    <button id="gasBtn" onpointerdown="pressGas(true)" onpointerup="pressGas(false)" onpointerleave="pressGas(false)" class="btn-cartoon py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-black rounded-2xl text-sm sm:text-base border-2 border-emerald-700 touch-area">
+                        🚀 按住踩油門
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== 第四關：探究結論核對與證書 ==================== -->
+        <section id="stage4" class="hidden flex-1 flex flex-col p-2 sm:p-4 overflow-y-auto custom-scroll">
+            <div class="max-w-3xl w-full mx-auto bg-white rounded-3xl border-4 border-amber-400 shadow-2xl p-4 sm:p-6 my-auto">
+                
+                <!-- 結論測驗區 (未完成時顯示) -->
+                <div id="conclusionQuizBox">
+                    <div class="text-center mb-4">
+                        <span class="bg-amber-400 text-amber-950 text-xs font-black px-3 py-1 rounded-full border border-amber-600">最終任務 • 核對工作紙結論</span>
+                        <h3 class="text-xl sm:text-2xl font-black text-sky-950 mt-1">📝 科學探究結論大挑戰</h3>
+                        <p class="text-xs sm:text-sm text-slate-600 font-bold">點選正確的詞語完成工作紙第3頁的「結論」，即可領取獎章！</p>
+                    </div>
+
+                    <div class="space-y-3 text-sm sm:text-base font-bold text-slate-800">
+                        <!-- 結論 1 -->
+                        <div class="bg-sky-50 p-3 rounded-2xl border-2 border-sky-200 flex flex-wrap items-center justify-between gap-2">
+                            <span>1. 探究結果（　　　）我們的假說。</span>
+                            <div class="flex gap-2">
+                                <button onclick="answerConclusion(1, '支持', this)" class="c-btn-1 btn-cartoon px-4 py-1.5 rounded-xl bg-white border-2 border-sky-400 text-sky-900 font-black">支持</button>
+                                <button onclick="answerConclusion(1, '不支持', this)" class="c-btn-1 btn-cartoon px-4 py-1.5 rounded-xl bg-white border-2 border-sky-400 text-sky-900 font-black">不支持</button>
+                            </div>
+                        </div>
+
+                        <!-- 結論 2 -->
+                        <div class="bg-sky-50 p-3 rounded-2xl border-2 border-sky-200 flex flex-wrap items-center justify-between gap-2">
+                            <span>2. 摩擦力是物體互相摩擦時產生的（　　　）。</span>
+                            <div class="flex gap-2">
+                                <button onclick="answerConclusion(2, '阻力', this)" class="c-btn-2 btn-cartoon px-4 py-1.5 rounded-xl bg-white border-2 border-sky-400 text-sky-900 font-black">阻力</button>
+                                <button onclick="answerConclusion(2, '動力', this)" class="c-btn-2 btn-cartoon px-4 py-1.5 rounded-xl bg-white border-2 border-sky-400 text-sky-900 font-black">動力</button>
+                            </div>
+                        </div>
+
+                        <!-- 結論 3 -->
+                        <div class="bg-sky-50 p-3 rounded-2xl border-2 border-sky-200 flex flex-wrap items-center justify-between gap-2">
+                            <span>3. 摩擦力的方向，跟物體運動的方向是（　　　）的。</span>
+                            <div class="flex gap-2">
+                                <button onclick="answerConclusion(3, '相反', this)" class="c-btn-3 btn-cartoon px-4 py-1.5 rounded-xl bg-white border-2 border-sky-400 text-sky-900 font-black">相反</button>
+                                <button onclick="answerConclusion(3, '相同', this)" class="c-btn-3 btn-cartoon px-4 py-1.5 rounded-xl bg-white border-2 border-sky-400 text-sky-900 font-black">相同</button>
+                            </div>
+                        </div>
+
+                        <!-- 生活應用小題 -->
+                        <div class="bg-amber-50 p-3 rounded-2xl border-2 border-amber-300 flex flex-wrap items-center justify-between gap-2">
+                            <span>4. 汽車輪胎表面有深花紋，是為了產生（　　　）的摩擦力防止打滑。</span>
+                            <div class="flex gap-2">
+                                <button onclick="answerConclusion(4, '較大', this)" class="c-btn-4 btn-cartoon px-4 py-1.5 rounded-xl bg-white border-2 border-amber-500 text-amber-900 font-black">較大</button>
+                                <button onclick="answerConclusion(4, '較小', this)" class="c-btn-4 btn-cartoon px-4 py-1.5 rounded-xl bg-white border-2 border-amber-500 text-amber-900 font-black">較小</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="conclusionAlert" class="hidden mt-3 text-center text-sm font-black text-red-600 bg-red-50 py-2 rounded-xl border border-red-300"></div>
+
+                    <button onclick="verifyConclusions()" class="btn-cartoon mt-4 w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black text-lg rounded-2xl border-2 border-emerald-700">
+                        🏅 提交結論並領取科學獎章！
+                    </button>
+                </div>
+
+                <!-- 過關電子獎狀 (全部答對後顯示) -->
+                <div id="certificateBox" class="hidden text-center py-2">
+                    <div class="bg-gradient-to-b from-amber-100 via-yellow-50 to-amber-100 border-4 border-amber-500 rounded-3xl p-5 sm:p-6 shadow-inner relative">
+                        <div class="text-5xl sm:text-6xl mb-2 animate-float">🏆</div>
+                        <div class="inline-block bg-amber-500 text-white text-xs font-black px-3 py-1 rounded-full mb-2">
+                            香港小學科學科 • 探究成就認證
+                        </div>
+                        <h2 class="text-2xl sm:text-3xl font-black text-amber-950 mb-1">小小科學探究家</h2>
+                        <p class="text-xs sm:text-sm font-bold text-amber-800 mb-4">
+                            恭喜你順利完成《活動5：摩擦力的產生和方向》全部實驗與挑戰！
+                        </p>
+
+                        <div class="bg-white/90 rounded-2xl p-3 text-left text-xs sm:text-sm font-bold text-slate-700 space-y-1.5 border-2 border-amber-300 mb-5">
+                            <p>✅ <strong>表面粗糙度：</strong>表面越粗糙，摩擦產生的阻力越大，拉動物件所需的力越大。</p>
+                            <p>✅ <strong>摩擦力的方向：</strong>摩擦力是阻礙物體運動的阻力，方向永遠與物體運動方向<strong>相反</strong>。</p>
+                            <p>✅ <strong>生活應用：</strong>汽車輪胎花紋能增加路面摩擦力，防止車輛打滑！</p>
+                        </div>
+
+                        <button onclick="restartWholeGame()" class="btn-cartoon px-8 py-3.5 bg-sky-500 hover:bg-sky-400 text-white font-black text-base sm:text-lg rounded-2xl border-2 border-sky-700">
+                            🔄 再玩一次挑戰
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 自訂彈出提示框 (取代 alert) -->
+    <div id="customModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl border-4 border-sky-400 max-w-sm w-full p-5 text-center shadow-2xl transform transition-all">
+            <div id="modalIcon" class="text-4xl mb-2">🎉</div>
+            <h4 id="modalTitle" class="text-xl font-black text-sky-950 mb-1">太棒了！</h4>
+            <p id="modalBody" class="text-sm font-bold text-slate-600 mb-4 leading-relaxed"></p>
+            <button id="modalActionBtn" onclick="closeCustomModal()" class="btn-cartoon w-full py-3 bg-sky-500 text-white font-black rounded-2xl border-2 border-sky-700 text-base">
+                繼續探究 ➔
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /* =====================================================================
+           1. Web Audio API 合成音效引擎 (免外部音訊檔，支援 iOS/Android 解鎖)
+           ===================================================================== */
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    audioCtx = new AudioContext();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('soundToggleBtn');
+            btn.textContent = soundEnabled ? '🔊' : '🔇';
+            btn.className = soundEnabled
+                ? 'btn-cartoon w-10 h-10 bg-emerald-400 hover:bg-emerald-300 text-white rounded-2xl flex items-center justify-center text-lg border-2 border-emerald-600'
+                : 'btn-cartoon w-10 h-10 bg-slate-300 hover:bg-slate-200 text-slate-700 rounded-2xl flex items-center justify-center text-lg border-2 border-slate-500';
+            if (soundEnabled) {
+                initAudio();
+                playTone(523.25, 'sine', 0.1, 0.15);
+            }
+        }
+
+        function playTone(freq, type = 'sine', duration = 0.12, volume = 0.15, delay = 0) {
+            if (!soundEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+
+            gain.gain.setValueAtTime(volume, audioCtx.currentTime + delay);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + duration);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start(audioCtx.currentTime + delay);
+            osc.stop(audioCtx.currentTime + delay + duration);
+        }
+
+        function playClickSound() {
+            playTone(660, 'triangle', 0.08, 0.15);
+        }
+
+        function playSuccessSound() {
+            playTone(523.25, 'sine', 0.12, 0.18, 0);
+            playTone(659.25, 'sine', 0.12, 0.18, 0.1);
+            playTone(783.99, 'sine', 0.25, 0.2, 0.2);
+        }
+
+        function playErrorSound() {
+            playTone(220, 'sawtooth', 0.18, 0.15, 0);
+            playTone(180, 'sawtooth', 0.22, 0.15, 0.12);
+        }
+
+        let lastFrictionSoundTime = 0;
+        function playFrictionNoise(roughness) {
+            if (!soundEnabled) return;
+            const now = Date.now();
+            if (now - lastFrictionSoundTime < 90) return;
+            lastFrictionSoundTime = now;
+            playTone(110 + roughness * 35 + Math.random() * 40, 'triangle', 0.06, 0.06);
+        }
+
+        /* =====================================================================
+           2. 粒子特效系統 (慶祝過關彩紙)
+           ===================================================================== */
+        const pCanvas = document.getElementById('particleCanvas');
+        const pCtx = pCanvas.getContext('2d');
+        let particles = [];
+
+        function resizeParticleCanvas() {
+            pCanvas.width = window.innerWidth;
+            pCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeParticleCanvas);
+        resizeParticleCanvas();
+
+        function spawnConfetti(x, y, count = 35) {
+            const colors = ['#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#a855f7'];
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x || window.innerWidth / 2,
+                    y: y || window.innerHeight / 2,
+                    vx: (Math.random() - 0.5) * 12,
+                    vy: (Math.random() - 0.8) * 12 - 2,
+                    size: Math.random() * 7 + 4,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    life: 1.0,
+                    rot: Math.random() * 360
+                });
+            }
+        }
+
+        function updateParticles() {
+            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.35; // 重力
+                p.life -= 0.02;
+                p.rot += 6;
+
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+                pCtx.save();
+                pCtx.translate(p.x, p.y);
+                pCtx.rotate((p.rot * Math.PI) / 180);
+                pCtx.globalAlpha = p.life;
+                pCtx.fillStyle = p.color;
+                pCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+                pCtx.restore();
+            }
+            requestAnimationFrame(updateParticles);
+        }
+        updateParticles();
+
+        /* =====================================================================
+           3. 全局導航與彈窗管理
+           ===================================================================== */
+        let currentStage = 0;
+
+        function startGame() {
+            initAudio();
+            playSuccessSound();
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            switchStage(1);
+        }
+
+        function showHomeModal() {
+            playClickSound();
+            document.getElementById('welcomeScreen').classList.remove('hidden');
+        }
+
+        function switchStage(stageNum) {
+            playClickSound();
+            currentStage = stageNum;
+            [1, 2, 3, 4].forEach(num => {
+                document.getElementById(`stage${num}`).classList.add('hidden');
+                const deskBtn = document.getElementById(`navBtn${num}`);
+                const mobBtn = document.getElementById(`mNavBtn${num}`);
+                if (deskBtn) {
+                    deskBtn.className = num === stageNum
+                        ? 'px-3 py-1 rounded-xl text-xs font-bold transition bg-sky-600 text-white shadow'
+                        : 'px-3 py-1 rounded-xl text-xs font-bold transition text-sky-700 hover:bg-white/60';
+                }
+                if (mobBtn) {
+                    mobBtn.className = num === stageNum
+                        ? 'px-2 py-1 rounded-lg bg-sky-600 text-white'
+                        : 'px-2 py-1 rounded-lg text-sky-800';
+                }
+            });
+
+            document.getElementById(`stage${stageNum}`).classList.remove('hidden');
+
+            if (stageNum === 1) resetAssemblyPosition();
+            if (stageNum === 2) renderStage2Question();
+            if (stageNum === 3) resetCar();
+        }
+
+        function showCustomModal(icon, title, body, btnText, callback) {
+            document.getElementById('modalIcon').textContent = icon;
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').textContent = body;
+            const btn = document.getElementById('modalActionBtn');
+            btn.textContent = btnText || '繼續探究 ➔';
+            btn.onclick = () => {
+                closeCustomModal();
+                if (callback) callback();
+            };
+            document.getElementById('customModal').classList.remove('hidden');
+        }
+
+        function closeCustomModal() {
+            playClickSound();
+            document.getElementById('customModal').classList.add('hidden');
+        }
+
+        /* =====================================================================
+           4. 第一關邏輯：虛擬拉力計實驗室 (支援觸控與滑鼠拖曳)
+           ===================================================================== */
+        const materialsData = {
+            desk: {
+                name: '1. 學生桌面',
+                surfaceType: '較光滑',
+                baseForce: 1.2,
+                roughness: 1,
+                cssClass: 'mat-desk',
+                label: '目前表面：1. 學生桌面（較光滑）'
+            },
+            cardboard: {
+                name: '2. 瓦通紙',
+                surfaceType: '較粗糙',
+                baseForce: 2.5,
+                roughness: 2,
+                cssClass: 'mat-cardboard',
+                label: '目前表面：2. 瓦通紙（較粗糙）'
+            },
+            sandpaper: {
+                name: '3. 粗砂砂紙',
+                surfaceType: '較粗糙',
+                baseForce: 4.2,
+                roughness: 3,
+                cssClass: 'mat-sandpaper',
+                label: '目前表面：3. 粗砂砂紙（較粗糙）'
+            },
+            antislip: {
+                name: '4. 防滑膠墊',
+                surfaceType: '較粗糙',
+                baseForce: 5.5,
+                roughness: 4,
+                cssClass: 'mat-antislip',
+                label: '目前表面：4. 防滑膠墊（較粗糙）'
+            }
+        };
+
+        let currentMaterialKey = 'desk';
+        let extraWeights = 0; // 0 到 2 個砝碼
+        let recordedResults = {}; // 儲存各材質讀數
+
+        // 拖曳物理變數
+        let isDraggingMeter = false;
+        let dragStartX = 0;
+        let blockOffsetX = 0;
+        let springStretch = 0;
+        let hasRecordedCurrentRun = false;
+
+        function changeWeights(delta) {
+            playClickSound();
+            extraWeights = Math.max(0, Math.min(2, extraWeights + delta));
+            const labels = ['標準 (0個)', '+1個砝碼', '+2個砝碼'];
+            document.getElementById('weightCountDisplay').textContent = labels[extraWeights];
+
+            const container = document.getElementById('weightsOnBlock');
+            container.innerHTML = '';
+            for (let i = 0; i < extraWeights; i++) {
+                const wEl = document.createElement('div');
+                wEl.className = 'w-7 h-5 bg-slate-600 border-2 border-slate-900 rounded-t-md flex items-center justify-center text-[9px] text-white font-black shadow';
+                wEl.textContent = '50g';
+                container.appendChild(wEl);
+            }
+            resetAssemblyPosition();
+        }
+
+        function selectMaterial(matKey) {
+            playClickSound();
+            currentMaterialKey = matKey;
+            const mat = materialsData[matKey];
+
+            // 更新表面外觀
+            const surfaceLayer = document.getElementById('surfaceLayer');
+            surfaceLayer.className = `w-full h-9 ${mat.cssClass} flex items-center justify-between px-4 transition-colors duration-300`;
+            document.getElementById('surfaceLabel').textContent = mat.label;
+
+            // 更新按鈕選中樣式
+            Object.keys(materialsData).forEach(k => {
+                const btn = document.getElementById(`matBtn-${k}`);
+                if (k === matKey) {
+                    btn.classList.add('ring-4', 'ring-amber-400', 'scale-105');
+                } else {
+                    btn.classList.remove('ring-4', 'ring-amber-400', 'scale-105');
+                }
+            });
+
+            resetAssemblyPosition();
+        }
+
+        function resetAssemblyPosition() {
+            isDraggingMeter = false;
+            blockOffsetX = 0;
+            springStretch = 0;
+            hasRecordedCurrentRun = false;
+
+            const assembly = document.getElementById('sliderAssembly');
+            const connector = document.getElementById('springConnector');
+            const meterVal = document.getElementById('forceMeterValue');
+            const badge = document.getElementById('forceFeedbackBadge');
+            const arrows = document.getElementById('dynamicArrows');
+            const frictionArrow = document.getElementById('frictionArrowVisual');
+
+            assembly.style.transform = `translateX(0px)`;
+            connector.style.width = `18px`;
+            meterVal.textContent = '0.0';
+            badge.textContent = `測試「${materialsData[currentMaterialKey].name}」：請按住拉力計向右拉！`;
+            badge.className = 'absolute top-2 left-3 bg-white/95 px-3 py-1 rounded-xl border-2 border-slate-300 shadow-sm text-xs sm:text-sm font-black text-slate-700';
+            arrows.classList.add('opacity-0');
+            frictionArrow.classList.add('hidden');
+        }
+
+        // 初始化拉力計觸控與滑鼠事件
+        const handleEl = document.getElementById('dynamometerHandle');
+        const arenaEl = document.getElementById('experimentArena');
+
+        function onDragStart(clientX) {
+            initAudio();
+            isDraggingMeter = true;
+            dragStartX = clientX;
+            handleEl.classList.remove('animate-pulse-glow');
+            document.getElementById('dynamicArrows').classList.remove('opacity-0');
+            document.getElementById('frictionArrowVisual').classList.remove('hidden');
+        }
+
+        function onDragMove(clientX) {
+            if (!isDraggingMeter) return;
+            const deltaX = Math.max(0, clientX - dragStartX);
+            const mat = materialsData[currentMaterialKey];
+            // 計算當前條件下所需的臨界拉力 (基礎值 + 砝碼加成)
+            const thresholdForce = +(mat.baseForce * (1 + extraWeights * 0.35)).toFixed(1);
+
+            // 每 24px 拖拉距離增加 1.0 N 拉力
+            const pullForce = +(deltaX / 24).toFixed(1);
+            const meterVal = document.getElementById('forceMeterValue');
+            const badge = document.getElementById('forceFeedbackBadge');
+            const connector = document.getElementById('springConnector');
+            const assembly = document.getElementById('sliderAssembly');
+
+            if (pullForce < thresholdForce) {
+                // 尚未克服最大靜摩擦力：木塊不動，彈簧伸長
+                springStretch = Math.min(48, deltaX * 0.45);
+                connector.style.width = `${18 + springStretch}px`;
+                meterVal.textContent = pullForce.toFixed(1);
+                badge.textContent = `拉力 ${pullForce.toFixed(1)} N ＜ 摩擦力，木塊仍被阻力拉住！`;
+                badge.className = 'absolute top-2 left-3 bg-amber-100 px-3 py-1 rounded-xl border-2 border-amber-400 shadow-sm text-xs sm:text-sm font-black text-amber-900';
+            } else {
+                // 克服靜摩擦力：木塊開始平穩滑動，讀數穩定在動摩擦力附近
+                const jitter = ((Math.random() - 0.5) * 0.1);
+                const steadyForce = Math.max(0.5, +(thresholdForce + jitter).toFixed(1));
+                meterVal.textContent = steadyForce.toFixed(1);
+
+                const maxSlide = arenaEl.clientWidth - 260;
+                const overDrag = deltaX - thresholdForce * 24;
+                blockOffsetX = Math.min(Math.max(15, overDrag * 0.85), Math.max(80, maxSlide));
+                assembly.style.transform = `translateX(${blockOffsetX}px)`;
+
+                playFrictionNoise(mat.roughness);
+
+                badge.textContent = `✨ 木塊滑動了！拉動所需拉力約為 ${thresholdForce.toFixed(1)} N`;
+                badge.className = 'absolute top-2 left-3 bg-emerald-100 px-3 py-1 rounded-xl border-2 border-emerald-500 shadow-sm text-xs sm:text-sm font-black text-emerald-900';
+
+                // 自動記錄到工作紙表格
+                if (!hasRecordedCurrentRun && blockOffsetX > 35) {
+                    hasRecordedCurrentRun = true;
+                    recordExperimentResult(currentMaterialKey, thresholdForce);
+                }
+            }
+        }
+
+        function onDragEnd() {
+            if (!isDraggingMeter) return;
+            isDraggingMeter = false;
+            handleEl.classList.add('animate-pulse-glow');
+            // 放手後彈簧回彈
+            document.getElementById('springConnector').style.width = '18px';
+            document.getElementById('forceMeterValue').textContent = '0.0';
+            document.getElementById('frictionArrowVisual').classList.add('hidden');
+        }
+
+        // 綁定 Pointer / Touch / Mouse 事件確保 iOS 與 Android 100% 順暢
+        handleEl.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) onDragStart(e.touches[0].clientX);
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+            if (isDraggingMeter && e.touches.length > 0) {
+                onDragMove(e.touches[0].clientX);
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', onDragEnd);
+
+        handleEl.addEventListener('mousedown', (e) => {
+            onDragStart(e.clientX);
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (isDraggingMeter) onDragMove(e.clientX);
+        });
+        window.addEventListener('mouseup', onDragEnd);
+
+        function recordExperimentResult(matKey, forceValue) {
+            playSuccessSound();
+            const isFirstTime = !recordedResults[matKey];
+            recordedResults[matKey] = forceValue.toFixed(1);
+
+            const valCell = document.getElementById(`val-${matKey}`);
+            valCell.textContent = `${forceValue.toFixed(1)} N ✅`;
+            valCell.className = 'py-2 px-2.5 text-right font-mono font-black text-emerald-700';
+
+            const rowEl = document.getElementById(`row-${matKey}`);
+            rowEl.classList.add('bg-emerald-100');
+
+            const completedCount = Object.keys(recordedResults).length;
+            document.getElementById('recordProgress').textContent = `已完成 ${completedCount} / 4 項`;
+
+            if (isFirstTime) {
+                spawnConfetti(window.innerWidth * 0.7, window.innerHeight * 0.4, 22);
+            }
+
+            if (completedCount === 4) {
+                const nextBtn = document.getElementById('toStage2Btn');
+                nextBtn.disabled = false;
+                nextBtn.textContent = '🎉 全部記錄完成！進入第二關：方向大特搜 ➔';
+                nextBtn.classList.add('animate-pulse-glow');
+            }
+        }
+
+        /* =====================================================================
+           5. 第二關邏輯：摩擦力方向大特搜 (結果與分析)
+           ===================================================================== */
+        const stage2Questions = [
+            {
+                title: '情境 1：在工作紙實驗中，我們「向右」拉動木塊',
+                motionHint: '物體運動方向：向右 (➡)',
+                prompt: '當向右拉動重物時，阻止重物移動的摩擦力是向哪邊的？',
+                options: [
+                    { text: '⬅ 向左邊（與運動方向相反）', correct: true },
+                    { text: '➡ 向右邊（與運動方向相同）', correct: false }
+                ],
+                explanation: '答對了！工作紙分析指出：當向右邊拉動重物時，阻止重物移動的摩擦力是向「左邊」的！',
+                svg: `<svg viewBox="0 0 260 95" class="w-60 h-24">
+                        <rect x="20" y="70" width="220" height="12" rx="4" fill="#94a3b8"/>
+                        <rect x="85" y="34" width="65" height="36" rx="6" fill="#fbbf24" stroke="#b45309" stroke-width="3"/>
+                        <text x="117" y="56" font-size="12" font-weight="900" fill="#78350f" text-anchor="middle">重物</text>
+                        <path d="M155 52 L215 52 L203 42 M215 52 L203 62" stroke="#ef4444" stroke-width="5" fill="none" stroke-linecap="round"/>
+                        <text x="185" y="36" font-size="12" font-weight="900" fill="#dc2626" text-anchor="middle">施力向右</text>
+                      </svg>`
+            },
+            {
+                title: '情境 2：小華在粗砂砂紙上「向左」推箱子',
+                motionHint: '物體運動方向：向左 (⬅)',
+                prompt: '箱子正在向左移動，此時地面對箱子產生的摩擦力（阻力）方向是？',
+                options: [
+                    { text: '⬅ 向左邊', correct: false },
+                    { text: '➡ 向右邊（阻礙箱子向左滑）', correct: true }
+                ],
+                explanation: '太聰明了！因為箱子向左移動，摩擦力永遠跟物體運動方向相反，所以摩擦力向「右邊」！',
+                svg: `<svg viewBox="0 0 260 95" class="w-60 h-24">
+                        <rect x="20" y="70" width="220" height="12" rx="4" fill="#475569"/>
+                        <rect x="110" y="34" width="65" height="36" rx="6" fill="#38bdf8" stroke="#0369a1" stroke-width="3"/>
+                        <text x="142" y="56" font-size="12" font-weight="900" fill="#0c4a6e" text-anchor="middle">箱子</text>
+                        <path d="M105 52 L45 52 L57 42 M45 52 L57 62" stroke="#ef4444" stroke-width="5" fill="none" stroke-linecap="round"/>
+                        <text x="75" y="36" font-size="12" font-weight="900" fill="#dc2626" text-anchor="middle">推力向左</text>
+                      </svg>`
+            },
+            {
+                title: '情境 3：比較「較光滑」與「較粗糙」的物料表面',
+                motionHint: '對比實驗：學生桌面 vs 防滑膠墊',
+                prompt: '根據工作紙「結果與分析」，在粗糙表面上拉物件，摩擦產生的阻力較？',
+                options: [
+                    { text: '📈 阻力較大，所需的拉力較大', correct: true },
+                    { text: '📉 阻力較小，所需的拉力較小', correct: false }
+                ],
+                explanation: '完全正確！在粗糙表面上，物體之間摩擦產生的阻力較「大」，所以拉物件所需的力也較「大」！',
+                svg: `<svg viewBox="0 0 260 95" class="w-60 h-24">
+                        <rect x="25" y="25" width="90" height="45" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="2.5"/>
+                        <text x="70" y="46" font-size="11" font-weight="900" fill="#1e40af" text-anchor="middle">光滑表面</text>
+                        <text x="70" y="61" font-size="10" font-weight="700" fill="#3b82f6" text-anchor="middle">拉力較小</text>
+                        <rect x="145" y="25" width="90" height="45" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="2.5"/>
+                        <text x="190" y="46" font-size="11" font-weight="900" fill="#92400e" text-anchor="middle">粗糙表面</text>
+                        <text x="190" y="61" font-size="10" font-weight="700" fill="#b45309" text-anchor="middle">拉力較大</text>
+                      </svg>`
+            },
+            {
+                title: '情境 4：木塊在斜坡上正在「向下」滑動',
+                motionHint: '物體運動方向：沿斜坡向下 (↙)',
+                prompt: '木塊沿著斜坡向下滑，斜坡表面產生的摩擦力是向哪個方向？',
+                options: [
+                    { text: '↗ 沿斜坡向上（阻止木塊下滑）', correct: true },
+                    { text: '↙ 沿斜坡向下（加速木塊下滑）', correct: false }
+                ],
+                explanation: '掌聲鼓勵！摩擦力是阻止物體滑動的阻力，木塊向下滑，摩擦力就「沿斜坡向上」拉住它！',
+                svg: `<svg viewBox="0 0 260 95" class="w-60 h-24">
+                        <polygon points="30,80 220,80 220,25" fill="#cbd5e1" stroke="#475569" stroke-width="2.5"/>
+                        <g transform="translate(135,42) rotate(-16)">
+                            <rect x="-22" y="-22" width="44" height="24" rx="4" fill="#fb923c" stroke="#9a3412" stroke-width="2.5"/>
+                            <path d="M-28 -10 L-60 -10 L-52 -16 M-60 -10 L-52 -4" stroke="#ef4444" stroke-width="4" fill="none" stroke-linecap="round"/>
+                        </g>
+                        <text x="75" y="34" font-size="11" font-weight="900" fill="#dc2626">下滑方向</text>
+                      </svg>`
+            }
+        ];
+
+        let q2CurrentIndex = 0;
+
+        function renderStage2Question() {
+            const q = stage2Questions[q2CurrentIndex];
+            document.getElementById('q2Index').textContent = q2CurrentIndex + 1;
+            document.getElementById('q2ScenarioTitle').textContent = q.title;
+            document.getElementById('q2SvgContainer').innerHTML = q.svg;
+            document.getElementById('q2MotionHint').textContent = q.motionHint;
+            document.getElementById('q2Prompt').textContent = q.prompt;
+
+            const fb = document.getElementById('q2Feedback');
+            fb.classList.add('hidden');
+
+            const optContainer = document.getElementById('q2Options');
+            optContainer.innerHTML = '';
+            q.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-cartoon p-3 rounded-2xl bg-white hover:bg-purple-100 border-2 border-purple-400 text-purple-950 font-black text-xs sm:text-sm text-center';
+                btn.textContent = opt.text;
+                btn.onclick = () => handleStage2Answer(opt.correct, q.explanation, btn);
+                optContainer.appendChild(btn);
+            });
+        }
+
+        function handleStage2Answer(isCorrect, explanation, btnEl) {
+            const fb = document.getElementById('q2Feedback');
+            fb.classList.remove('hidden');
+
+            if (isCorrect) {
+                playSuccessSound();
+                spawnConfetti(window.innerWidth / 2, window.innerHeight / 2, 25);
+                btnEl.className = 'btn-cartoon p-3 rounded-2xl bg-emerald-500 border-2 border-emerald-700 text-white font-black text-xs sm:text-sm text-center';
+                fb.textContent = `✅ ${explanation}`;
+                fb.className = 'mt-2.5 p-2.5 rounded-xl text-center text-xs sm:text-sm font-black bg-emerald-100 text-emerald-900 border border-emerald-400';
+
+                // 禁用所有選項避免重複點擊
+                document.querySelectorAll('#q2Options button').forEach(b => b.disabled = true);
+
+                setTimeout(() => {
+                    if (q2CurrentIndex < stage2Questions.length - 1) {
+                        q2CurrentIndex++;
+                        renderStage2Question();
+                    } else {
+                        showCustomModal(
+                            '🧭',
+                            '方向大特搜全破！',
+                            '你已經完全掌握「摩擦力是阻力，且方向與運動方向相反」！現在前往第三關駕駛賽車吧！',
+                            '前往第三關：輪胎小賽車 🏎️',
+                            () => {
+                                q2CurrentIndex = 0;
+                                switchStage(3);
+                            }
+                        );
+                    }
+                }, 1500);
+            } else {
+                playErrorSound();
+                btnEl.classList.add('animate-shake', 'bg-red-100', 'border-red-500');
+                fb.textContent = '❌ 再想一想！摩擦力是「阻礙」物體移動的力，方向會跟運動方向相反喔！';
+                fb.className = 'mt-2.5 p-2 rounded-xl text-center text-xs sm:text-sm font-black bg-red-100 text-red-800 border border-red-400';
+            }
+        }
+
+        /* =====================================================================
+           6. 第三關邏輯：生活應用小賽車 (輪胎花紋大作戰)
+           ===================================================================== */
+        let selectedTireType = null; // 'smooth' 或 'tread'
+        let carPosX = 16;
+        let carSpeed = 0;
+        let isGasPressed = false;
+        let isBrakePressed = false;
+        let raceLoopId = null;
+        let slipWarningShown = false;
+
+        function selectTire(type) {
+            playClickSound();
+            selectedTireType = type;
+            slipWarningShown = false;
+
+            const smoothBtn = document.getElementById('tireBtn-smooth');
+            const treadBtn = document.getElementById('tireBtn-tread');
+            const rearTread = document.getElementById('rearTread');
+            const frontTread = document.getElementById('frontTread');
+            const statusText = document.getElementById('raceStatusText');
+
+            if (type === 'smooth') {
+                smoothBtn.className = 'btn-cartoon p-2 sm:p-3 rounded-2xl border-4 border-sky-500 bg-sky-100 flex items-center gap-2 sm:gap-3 text-left';
+                treadBtn.className = 'btn-cartoon p-2 sm:p-3 rounded-2xl border-2 border-slate-300 bg-white flex items-center gap-2 sm:gap-3 text-left opacity-80';
+                rearTread.classList.add('hidden');
+                frontTread.classList.add('hidden');
+                statusText.textContent = '已裝上「光滑輪胎」：試試按住油門看看會發生什麼事！';
+            } else {
+                treadBtn.className = 'btn-cartoon p-2 sm:p-3 rounded-2xl border-4 border-orange-500 bg-orange-100 flex items-center gap-2 sm:gap-3 text-left';
+                smoothBtn.className = 'btn-cartoon p-2 sm:p-3 rounded-2xl border-2 border-slate-300 bg-white flex items-center gap-2 sm:gap-3 text-left opacity-80';
+                rearTread.classList.remove('hidden');
+                frontTread.classList.remove('hidden');
+                statusText.textContent = '已裝上「深花紋粗糙輪胎」：摩擦力充足，出發吧！';
+            }
+        }
+
+        function resetCar() {
+            carPosX = 16;
+            carSpeed = 0;
+            isGasPressed = false;
+            isBrakePressed = false;
+            slipWarningShown = false;
+            const carEl = document.getElementById('raceCar');
+            carEl.style.transform = 'translateX(0px) rotate(0deg)';
+            document.getElementById('rearWheel').classList.remove('tire-spin', 'tire-spin-fast');
+            document.getElementById('frontWheel').classList.remove('tire-spin', 'tire-spin-fast');
+        }
+
+        function pressGas(pressed) {
+            initAudio();
+            if (pressed && !selectedTireType) {
+                playErrorSound();
+                document.getElementById('raceStatusText').textContent = '⚠️ 請先在上方選擇一種「輪胎」再開車！';
+                return;
+            }
+            isGasPressed = pressed;
+        }
+
+        function pressBrake(pressed) {
+            isBrakePressed = pressed;
+        }
+
+        function updateRaceLoop() {
+            if (currentStage === 3 && selectedTireType) {
+                const carEl = document.getElementById('raceCar');
+                const rearW = document.getElementById('rearWheel');
+                const frontW = document.getElementById('frontWheel');
+                const statusText = document.getElementById('raceStatusText');
+                const trackWidth = carEl.parentElement.clientWidth - 135;
+
+                if (selectedTireType === 'smooth') {
+                    // 光滑輪胎在濕滑路面摩擦力太小：輪胎空轉打滑！
+                    if (isGasPressed) {
+                        rearW.classList.add('tire-spin-fast');
+                        frontW.classList.add('tire-spin-fast');
+                        carPosX += 0.45; // 幾乎原地空轉
+                        const wobble = Math.sin(Date.now() / 45) * 6;
+                        carEl.style.transform = `translateX(${carPosX - 16}px) rotate(${wobble}deg)`;
+                        playFrictionNoise(1);
+                        statusText.textContent = '💦 糟糕！輪胎太光滑，摩擦力不足，車輪在原地打滑！';
+
+                        if (carPosX > 55 && !slipWarningShown) {
+                            slipWarningShown = true;
+                            isGasPressed = false;
+                            playErrorSound();
+                            showCustomModal(
+                                '💦',
+                                '車子打滑了！',
+                                '因為光滑輪胎表面不夠粗糙，與路面之間的「摩擦力太小」，車輪抓不住地面！請改選「B. 深花紋粗糙輪胎」再試一次！',
+                                '去換深花紋輪胎 🔧',
+                                () => {
+                                    resetCar();
+                                    selectTire('tread');
+                                }
+                            );
+                        }
+                    } else {
+                        rearW.classList.remove('tire-spin-fast');
+                        frontW.classList.remove('tire-spin-fast');
+                    }
+                } else if (selectedTireType === 'tread') {
+                    // 深花紋粗糙輪胎：摩擦力大，穩健加速與煞車
+                    if (isGasPressed) {
+                        carSpeed = Math.min(5.5, carSpeed + 0.25);
+                        rearW.classList.add('tire-spin');
+                        frontW.classList.add('tire-spin');
+                        playFrictionNoise(3);
+                        statusText.textContent = '🔥 深花紋增加粗糙度，產生大摩擦力，穩健前進中！';
+                    } else if (isBrakePressed) {
+                        carSpeed = Math.max(0, carSpeed - 0.5);
+                        statusText.textContent = '🛑 摩擦力發揮作用，車子穩穩煞停！';
+                    } else {
+                        carSpeed = Math.max(0, carSpeed - 0.12);
+                    }
+
+                    if (carSpeed <= 0.1) {
+                        rearW.classList.remove('tire-spin');
+                        frontW.classList.remove('tire-spin');
+                    }
+
+                    carPosX += carSpeed;
+                    carEl.style.transform = `translateX(${carPosX - 16}px) rotate(0deg)`;
+
+                    // 到達終點
+                    if (carPosX >= trackWidth && trackWidth > 50) {
+                        isGasPressed = false;
+                        carSpeed = 0;
+                        playSuccessSound();
+                        spawnConfetti(window.innerWidth / 2, window.innerHeight / 2, 45);
+                        showCustomModal(
+                            '🏁',
+                            '順利衝過終點！',
+                            '生活應用大成功！汽車輪胎表面有深花紋（很粗糙），正是為了產生「較大的摩擦力」，讓車子在路上不會打滑！',
+                            '前往最後一關：總結工作紙 📝',
+                            () => switchStage(4)
+                        );
+                        resetCar();
+                    }
+                }
+            }
+            raceLoopId = requestAnimationFrame(updateRaceLoop);
+        }
+        updateRaceLoop();
+
+        /* =====================================================================
+           7. 第四關邏輯：探究結論核對與電子獎章
+           ===================================================================== */
+        const conclusionAnswers = {
+            1: null,
+            2: null,
+            3: null,
+            4: null
+        };
+
+        const correctConclusions = {
+            1: '支持',
+            2: '阻力',
+            3: '相反',
+            4: '較大'
+        };
+
+        function answerConclusion(qNum, value, btnEl) {
+            playClickSound();
+            conclusionAnswers[qNum] = value;
+
+            document.querySelectorAll(`.c-btn-${qNum}`).forEach(btn => {
+                btn.classList.remove('bg-sky-600', 'text-white', 'border-sky-800');
+                btn.classList.add('bg-white', 'text-sky-900');
+            });
+
+            btnEl.classList.remove('bg-white', 'text-sky-900');
+            btnEl.classList.add('bg-sky-600', 'text-white', 'border-sky-800');
+            document.getElementById('conclusionAlert').classList.add('hidden');
+        }
+
+        function verifyConclusions() {
+            const alertBox = document.getElementById('conclusionAlert');
+            for (let i = 1; i <= 4; i++) {
+                if (!conclusionAnswers[i]) {
+                    playErrorSound();
+                    alertBox.textContent = `⚠️ 請先完成第 ${i} 題的選擇喔！`;
+                    alertBox.classList.remove('hidden');
+                    return;
+                }
+                if (conclusionAnswers[i] !== correctConclusions[i]) {
+                    playErrorSound();
+                    alertBox.textContent = `❌ 第 ${i} 題好像有點不對，再回想一下剛才的實驗結果吧！`;
+                    alertBox.classList.remove('hidden');
+                    return;
+                }
+            }
+
+            // 全部答對，頒發電子獎章！
+            playSuccessSound();
+            spawnConfetti(window.innerWidth * 0.3, window.innerHeight * 0.4, 40);
+            spawnConfetti(window.innerWidth * 0.7, window.innerHeight * 0.4, 40);
+
+            document.getElementById('conclusionQuizBox').classList.add('hidden');
+            document.getElementById('certificateBox').classList.remove('hidden');
+        }
+
+        function restartWholeGame() {
+            playClickSound();
+            recordedResults = {};
+            extraWeights = 0;
+            q2CurrentIndex = 0;
+            selectedTireType = null;
+            Object.keys(conclusionAnswers).forEach(k => conclusionAnswers[k] = null);
+
+            // 重置記錄表 UI
+            Object.keys(materialsData).forEach(k => {
+                const cell = document.getElementById(`val-${k}`);
+                cell.textContent = '待測試...';
+                cell.className = 'py-2 px-2.5 text-right font-mono text-slate-400';
+                document.getElementById(`row-${k}`).classList.remove('bg-emerald-100');
+            });
+            document.getElementById('recordProgress').textContent = '已完成 0 / 4 項';
+            const nextBtn = document.getElementById('toStage2Btn');
+            nextBtn.disabled = true;
+            nextBtn.textContent = '完成4項測試即可解鎖第二關 🔒';
+            nextBtn.classList.remove('animate-pulse-glow');
+
+            // 重置第四關 UI
+            document.getElementById('conclusionQuizBox').classList.remove('hidden');
+            document.getElementById('certificateBox').classList.add('hidden');
+            [1, 2, 3, 4].forEach(num => {
+                document.querySelectorAll(`.c-btn-${num}`).forEach(btn => {
+                    btn.classList.remove('bg-sky-600', 'text-white', 'border-sky-800');
+                    btn.classList.add('bg-white', 'text-sky-900');
+                });
+            });
+
+            changeWeights(0);
+            selectMaterial('desk');
+            switchStage(1);
+        }
+    </script>
+</body>
+</html>
